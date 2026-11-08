@@ -1,0 +1,52 @@
+name: Repository health
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: repository-health-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Hosted runs are for the public repository. On a private copy every job is
+# skipped, and the same command runs locally.
+jobs:
+  public-surface:
+    name: Public repository surface
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+      - name: Verify public surface, links and workflow hygiene
+        env:
+          # A private copy reports publication markers as notices; the public
+          # repository fails on them.
+          REPOSITORY_VISIBILITY: ${{ github.event.repository.private && 'private' || 'public' }}
+        run: node .github/scripts/verify-repository-health.mjs --visibility "$REPOSITORY_VISIBILITY"
+
+  required:
+    # Single aggregate for this workflow, so a required-check list survives
+    # job renames. Every other job in this workflow must be listed in needs.
+    name: Repository health result
+    if: ${{ always() && !github.event.repository.private }}
+    needs:
+      - public-surface
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        env:
+          PUBLIC_SURFACE_RESULT: ${{ needs.public-surface.result }}
+        run: test "$PUBLIC_SURFACE_RESULT" = "success"

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reference source observation protocol",
+  "description": "Output-only observations. This schema is never accepted as replay/model input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "phase",
+    "observation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "oip-reference-observation-v2"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "phase": {
+      "enum": [
+        "before",
+        "after"
+      ]
+    },
+    "observation": {
+      "type": "object"
+    }
+  }
+}

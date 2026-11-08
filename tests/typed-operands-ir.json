@@ -1,0 +1,494 @@
+{
+  "representation": "Flat IntInf.integer list; JSON uses an array of canonical nonnegative decimal strings",
+  "tokens": {
+    "0": "Scalar [0,value]",
+    "1": "Bytes [1,count,octets...]",
+    "2": "List [2,count,child...]",
+    "3": "None [3]",
+    "4": "Some [4,child]",
+    "10+": "Domain node [tag,arity,child...]"
+  },
+  "domain_nodes": {
+    "10": {
+      "name": "Ordinary",
+      "arity": 5,
+      "fields": [
+        "Native100",
+        "Option Credential101",
+        "List Pair90(asset,version)",
+        "Command110..122",
+        "List Bytes(typed proof blobs)"
+      ]
+    },
+    "11": {
+      "name": "Legal",
+      "arity": 4,
+      "fields": [
+        "Native100",
+        "Scalar stage:0 emission/1 receiving commit",
+        "Legal102",
+        "Bytes proof"
+      ]
+    },
+    "12": {
+      "name": "Spend",
+      "arity": 2,
+      "fields": [
+        "Native100",
+        "Spend103"
+      ]
+    },
+    "13": {
+      "name": "Read",
+      "arity": 2,
+      "fields": [
+        "SessionProof104",
+        "ReadRequest150..155"
+      ]
+    },
+    "14": {
+      "name": "Capture",
+      "arity": 2,
+      "fields": [
+        "SessionProof104",
+        "ApplicationQuery160..165"
+      ]
+    },
+    "15": {
+      "name": "Receipt",
+      "arity": 3,
+      "fields": [
+        "Scalar outer session",
+        "Bytes canonical encoding of decoded OriginalCore",
+        "Recursive typed Original operand"
+      ]
+    },
+    "16": {
+      "name": "Response",
+      "arity": 6,
+      "fields": [
+        "Pair90 call id(namespace,sequence)",
+        "Scalar kind1..3",
+        "Scalar result number",
+        "Option Scalar commit position",
+        "Bytes canonical encoding of decoded OriginalCore",
+        "Recursive typed Original operand"
+      ]
+    },
+    "17": {
+      "name": "SettlementACK",
+      "arity": 1,
+      "fields": [
+        "ScheduledACK105"
+      ]
+    },
+    "18": {
+      "name": "Capabilities",
+      "arity": 9,
+      "fields": [
+        "Scalar deployment",
+        "Scalar sender",
+        "Scalar receiver",
+        "Scalar challenge",
+        "Scalar expires",
+        "List Scalar versions(sorted)",
+        "List Scalar families(sorted)",
+        "List Scalar atomicities(sorted)",
+        "List Scalar schemes(sorted)"
+      ]
+    },
+    "19": {
+      "name": "Liveness",
+      "arity": 2,
+      "fields": [
+        "Scalar challenge",
+        "Scalar expires"
+      ]
+    },
+    "20": {
+      "name": "Handover",
+      "arity": 11,
+      "fields": [
+        "Scalar session",
+        "Pair90 expected cut(epoch,revision)",
+        "Scalar asset",
+        "Scalar previous",
+        "Scalar successor",
+        "Scalar old session",
+        "Scalar new session",
+        "Scalar epoch",
+        "List Context106",
+        "Bytes first proof",
+        "Bytes second proof"
+      ]
+    },
+    "21": {
+      "name": "Install",
+      "arity": 6,
+      "fields": [
+        "Scalar session",
+        "Pair90 expected cut(epoch,revision)",
+        "Scalar epoch",
+        "List Context106",
+        "List SessionBinding107",
+        "Bytes proof"
+      ]
+    },
+    "90": {
+      "name": "Pair",
+      "arity": 2,
+      "fields": [
+        "Scalar first",
+        "Scalar second"
+      ]
+    },
+    "91": {
+      "name": "Triple",
+      "arity": 3,
+      "fields": [
+        "Scalar first",
+        "Scalar second",
+        "Scalar third"
+      ]
+    },
+    "100": {
+      "name": "Native",
+      "arity": 13,
+      "fields": [
+        "Scalar reference",
+        "Pair90 id(namespace,sequence)",
+        "Scalar session",
+        "Pair90 cut(epoch,revision)",
+        "Scalar origin epoch",
+        "Pair90 origin(domain,event)",
+        "Scalar asset",
+        "Scalar funding owner",
+        "Scalar destination",
+        "Scalar recipient",
+        "Scalar full amount",
+        "Scalar actual typed endpoint (ordinary payload.endpoint; legal/spend fixed request target)",
+        "Scalar actual typed payload caller"
+      ]
+    },
+    "101": {
+      "name": "Credential",
+      "arity": 5,
+      "fields": [
+        "Scalar token asset",
+        "Scalar token owner",
+        "Scalar token generation",
+        "Scalar credential epoch",
+        "Pair90 credential origin"
+      ]
+    },
+    "102": {
+      "name": "LegalFields",
+      "arity": 9,
+      "fields": [
+        "Scalar action1..7",
+        "Scalar officer",
+        "Scalar jurisdiction",
+        "Scalar basis",
+        "Scalar issuance epoch",
+        "List Scalar scope(sorted)",
+        "Option Pair90 predecessor",
+        "Option Scalar destination",
+        "Option Scalar appeal deadline"
+      ]
+    },
+    "103": {
+      "name": "SpendFields",
+      "arity": 7,
+      "fields": [
+        "Scalar reference",
+        "Scalar sender",
+        "Scalar recipient",
+        "Scalar kind0..4",
+        "Scalar full amount",
+        "Option Enforcement108",
+        "Option Bytes proof"
+      ]
+    },
+    "104": {
+      "name": "SessionProof",
+      "arity": 2,
+      "fields": [
+        "Scalar session",
+        "Scalar authority epoch"
+      ]
+    },
+    "105": {
+      "name": "ScheduledACK",
+      "arity": 10,
+      "fields": [
+        "Pair90 origin",
+        "Scalar commit position",
+        "Scalar target",
+        "Scalar asset",
+        "Scalar owner",
+        "Scalar destination",
+        "Scalar recipient",
+        "Scalar full amount",
+        "Scalar origin epoch",
+        "Scalar terminal kind1 confirmed/2 reversed"
+      ]
+    },
+    "106": {
+      "name": "EndpointContext",
+      "arity": 5,
+      "fields": [
+        "Scalar endpoint",
+        "Scalar epoch",
+        "List Triple91(principal,route,permission)",
+        "List Dependency109",
+        "List Triple91(principal,asset,epoch)"
+      ]
+    },
+    "107": {
+      "name": "SessionBinding",
+      "arity": 3,
+      "fields": [
+        "Scalar session id",
+        "Scalar principal",
+        "Scalar authority epoch"
+      ]
+    },
+    "108": {
+      "name": "Enforcement",
+      "arity": 6,
+      "fields": [
+        "Scalar officer",
+        "Scalar jurisdiction",
+        "Scalar basis",
+        "List Scalar assets(sorted)",
+        "Option Pair90 prior seizure",
+        "Option Scalar appeal deadline"
+      ]
+    },
+    "109": {
+      "name": "Dependency",
+      "arity": 2,
+      "fields": [
+        "Scalar asset",
+        "List Scalar dependencies(sorted)"
+      ]
+    },
+    "110": {
+      "name": "Reserve",
+      "arity": 1,
+      "fields": [
+        "Scalar duration"
+      ]
+    },
+    "111": {
+      "name": "Dispatch",
+      "arity": 1,
+      "fields": [
+        "Scalar generation"
+      ]
+    },
+    "112": {
+      "name": "Debit",
+      "arity": 1,
+      "fields": [
+        "Scalar generation"
+      ]
+    },
+    "113": {
+      "name": "Cancel",
+      "arity": 1,
+      "fields": [
+        "Scalar generation"
+      ]
+    },
+    "114": {
+      "name": "Fence",
+      "arity": 1,
+      "fields": [
+        "Scalar generation"
+      ]
+    },
+    "115": {
+      "name": "Preempt",
+      "arity": 1,
+      "fields": [
+        "Scalar duration"
+      ]
+    },
+    "116": {
+      "name": "Timeout",
+      "arity": 1,
+      "fields": [
+        "Scalar elapsed"
+      ]
+    },
+    "117": {
+      "name": "RecordTerminal",
+      "arity": 2,
+      "fields": [
+        "Scalar kind1/2",
+        "Scalar reference"
+      ]
+    },
+    "118": {
+      "name": "Deliver",
+      "arity": 1,
+      "fields": [
+        "Scalar reference"
+      ]
+    },
+    "119": {
+      "name": "Refund",
+      "arity": 2,
+      "fields": [
+        "Scalar generation",
+        "Scalar reference"
+      ]
+    },
+    "120": {
+      "name": "Reconcile",
+      "arity": 2,
+      "fields": [
+        "Scalar generation",
+        "Scalar reference"
+      ]
+    },
+    "121": {
+      "name": "Write",
+      "arity": 2,
+      "fields": [
+        "Scalar generation",
+        "Scalar value"
+      ]
+    },
+    "122": {
+      "name": "Publish",
+      "arity": 0,
+      "fields": []
+    },
+    "150": {
+      "name": "Current",
+      "arity": 2,
+      "fields": [
+        "ApplicationQuery160..165",
+        "Pair90 expected cut(epoch,revision)"
+      ]
+    },
+    "151": {
+      "name": "Historical",
+      "arity": 2,
+      "fields": [
+        "ApplicationQuery160..165",
+        "Scalar revision"
+      ]
+    },
+    "152": {
+      "name": "Raw",
+      "arity": 1,
+      "fields": [
+        "ApplicationQuery160..165"
+      ]
+    },
+    "153": {
+      "name": "OperationStatus",
+      "arity": 1,
+      "fields": [
+        "Pair90 origin"
+      ]
+    },
+    "154": {
+      "name": "Journal",
+      "arity": 0,
+      "fields": []
+    },
+    "155": {
+      "name": "Owner",
+      "arity": 1,
+      "fields": [
+        "Scalar asset"
+      ]
+    },
+    "160": {
+      "name": "Application",
+      "arity": 1,
+      "fields": [
+        "Scalar asset"
+      ]
+    },
+    "161": {
+      "name": "Source",
+      "arity": 1,
+      "fields": [
+        "Pair90(domain,asset)"
+      ]
+    },
+    "162": {
+      "name": "Destination",
+      "arity": 1,
+      "fields": [
+        "Triple91(endpoint,asset,owner)"
+      ]
+    },
+    "163": {
+      "name": "Root",
+      "arity": 2,
+      "fields": [
+        "Pair90 origin",
+        "Triple91(destination,asset,owner)"
+      ]
+    },
+    "164": {
+      "name": "Regulatory",
+      "arity": 2,
+      "fields": [
+        "Scalar domain",
+        "Scalar asset"
+      ]
+    },
+    "165": {
+      "name": "Terminal",
+      "arity": 1,
+      "fields": [
+        "Pair90 origin"
+      ]
+    },
+    "200": {
+      "name": "AuthenticatedTransportKey",
+      "arity": 4,
+      "fields": [
+        "Scalar deployment",
+        "Scalar source",
+        "Scalar principal",
+        "Bytes UUID"
+      ]
+    }
+  },
+  "finite_sets": "Serialize actual decoded finite set in strictly increasing numeric order; never enumerate nat or alter a frozen decoder.",
+  "json_enum_indices": {
+    "route": [
+      "Normal",
+      "Administrative",
+      "Adapter"
+    ],
+    "permission": [
+      "Reserve",
+      "Dispatch",
+      "Debit",
+      "Cancel",
+      "Fence",
+      "Preempt",
+      "ObserveTime",
+      "Attest",
+      "Credit",
+      "Refund",
+      "Reconcile",
+      "Write",
+      "PublishPrimary"
+    ],
+    "index_base": 0
+  },
+  "no_raw_echo": "Native tail_words/proof_bytes are not serialized wholesale. Each decoder's typed credential/versions/command/legal/spend/read/ACK/governance fields drive the summary. Only actual typed proof-byte fields and canonical encoding of an already decoded OriginalCore are bytes nodes; recursive original typed IR is also mandatory.",
+  "read_boundary": "The existing model materializes session_proof(epoch from canonical Core) and Current expected cut. Rust/Go visitors must use the actual decoded read plus the same canonical Core epoch; do not re-run a competing raw operand parser.",
+  "accepted_refused": "Summary is present only after the existing transport oracle accepts first0 or identical1. Refusal has null summary/core/signing/key observations. An accepted path whose actual typed decoder cannot supply the summary must fail the comparison as incomplete; never substitute Accept/bool or an empty summary.",
+  "schema": "oip-typed-operands-ir-v1"
+}

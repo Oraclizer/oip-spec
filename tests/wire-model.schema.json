@@ -1,0 +1,447 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:oip:wire-model:v1",
+  "title": "OIP executable transport model lock and data ABI",
+  "description": "Requirements for the final bound typed wire artifact lock. Null/unbound preparation does not satisfy this bound schema.",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "blobSha1": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "u64": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615,
+      "description": "The serializer additionally rejects lexical JSON floats and booleans."
+    },
+    "hostSize": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807,
+      "description": "Shared nonnegative Rust usize / Go int configuration domain on the required 64-bit host; out-of-domain metadata is an execution-input error, not a wire refusal."
+    },
+    "octetHex": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "families",
+        "atomicities",
+        "schemes"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/u64"
+        },
+        "families": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/u64"
+          }
+        },
+        "atomicities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/u64"
+          }
+        },
+        "schemes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/u64"
+          }
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deployment",
+        "source",
+        "target",
+        "principal",
+        "key_id",
+        "epoch",
+        "route_scope",
+        "now",
+        "asset_ttl_floor",
+        "future_skew",
+        "max_frame",
+        "version_floor",
+        "max_nesting",
+        "critical_allowed",
+        "public_key"
+      ],
+      "properties": {
+        "deployment": {
+          "$ref": "#/$defs/u64"
+        },
+        "source": {
+          "$ref": "#/$defs/u64"
+        },
+        "target": {
+          "$ref": "#/$defs/u64"
+        },
+        "principal": {
+          "$ref": "#/$defs/u64"
+        },
+        "key_id": {
+          "$ref": "#/$defs/u64"
+        },
+        "epoch": {
+          "$ref": "#/$defs/u64"
+        },
+        "route_scope": {
+          "$ref": "#/$defs/u64"
+        },
+        "now": {
+          "$ref": "#/$defs/u64"
+        },
+        "asset_ttl_floor": {
+          "$ref": "#/$defs/u64"
+        },
+        "future_skew": {
+          "$ref": "#/$defs/u64"
+        },
+        "max_frame": {
+          "$ref": "#/$defs/hostSize"
+        },
+        "version_floor": {
+          "$ref": "#/$defs/u64"
+        },
+        "max_nesting": {
+          "$ref": "#/$defs/hostSize"
+        },
+        "critical_allowed": {
+          "type": "boolean"
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Not sent to the model; signature_valid is the explicit crypto assumption."
+        }
+      }
+    },
+    "inputRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "layer",
+        "threshold_supported",
+        "id",
+        "packet_hex",
+        "profile",
+        "boundary",
+        "signature_valid",
+        "attestation_valid",
+        "prior_binding"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "layer": {
+          "const": "transport"
+        },
+        "threshold_supported": {
+          "const": false
+        },
+        "id": {
+          "type": "string"
+        },
+        "packet_hex": {
+          "$ref": "#/$defs/octetHex"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "boundary": {
+          "$ref": "#/$defs/boundary"
+        },
+        "signature_valid": {
+          "type": "boolean"
+        },
+        "attestation_valid": {
+          "type": "boolean"
+        },
+        "prior_binding": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/octetHex"
+            }
+          ]
+        },
+        "family": {
+          "description": "Regression metadata; never a model decision input.",
+          "$ref": "#/$defs/u64"
+        },
+        "opcode": {
+          "description": "Regression metadata; never a model decision input.",
+          "$ref": "#/$defs/u64"
+        },
+        "reference_accepts": {
+          "type": "boolean",
+          "description": "Regression metadata; the general transport does not apply this filter."
+        },
+        "seed": {
+          "$ref": "#/$defs/u64",
+          "description": "Regression metadata; never a model decision input."
+        },
+        "expected": {
+          "type": "object",
+          "description": "Regression expectation; ignored by model serialization."
+        }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "name",
+        "git_blob_sha1",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "model",
+            "driver",
+            "origin",
+            "diagnostics"
+          ]
+        },
+        "name": {
+          "enum": [
+            "oip_wire_oracle.ML",
+            "mirror-driver.ML",
+            "export-origin.json",
+            "compiler-diagnostics.json"
+          ]
+        },
+        "git_blob_sha1": {
+          "$ref": "#/$defs/blobSha1"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        }
+      }
+    },
+    "identity": {
+      "description": "One initial OIP-MODEL TSV record. It precedes any OIP-MIRROR result and is compared with independent code pins.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wire_schema",
+        "abi",
+        "scope",
+        "entrypoint",
+        "natural_refinement",
+        "runtime_source_hash"
+      ],
+      "properties": {
+        "wire_schema": {
+          "const": 1
+        },
+        "abi": {
+          "const": "intinf-wire-values-v2"
+        },
+        "scope": {
+          "const": "wire-v6-general-31-values"
+        },
+        "entrypoint": {
+          "const": "OIP_Wire_Oracle.code_typed_transport_flat_oracle"
+        },
+        "natural_refinement": {
+          "const": "HOL-Library.Code_Target_Nat"
+        },
+        "runtime_source_hash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "modelOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "verdict",
+        "retained_binding",
+        "reencoded_core_hex",
+        "signing_preimage_hex",
+        "transport_key_ir",
+        "typed_operand_ir"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "accept:first",
+            "accept:identical",
+            54,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76
+          ]
+        },
+        "retained_binding": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(?:[0-9a-f]{2})*$"
+        },
+        "reencoded_core_hex": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(?:[0-9a-f]{2})+$"
+        },
+        "signing_preimage_hex": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(?:[0-9a-f]{2})+$"
+        },
+        "transport_key_ir": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:0|[1-9][0-9]*)$"
+          }
+        },
+        "typed_operand_ir": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:0|[1-9][0-9]*)$"
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lock_version",
+    "binding_status",
+    "artifact_transport",
+    "repository",
+    "wire_schema",
+    "abi",
+    "scope",
+    "entrypoint",
+    "natural_refinement",
+    "runtime_source_hash",
+    "verified_export_sha256",
+    "corpus",
+    "files",
+    "public_namespace",
+    "identity_function"
+  ],
+  "properties": {
+    "lock_version": {
+      "const": 1
+    },
+    "binding_status": {
+      "const": "bound"
+    },
+    "artifact_transport": {
+      "const": "github-git-blob-v1"
+    },
+    "repository": {
+      "const": "Oraclizer/formal-verification"
+    },
+    "wire_schema": {
+      "const": 1
+    },
+    "abi": {
+      "const": "intinf-wire-values-v2"
+    },
+    "scope": {
+      "const": "wire-v6-general-31-values"
+    },
+    "entrypoint": {
+      "const": "OIP_Wire_Oracle.code_typed_transport_flat_oracle"
+    },
+    "natural_refinement": {
+      "const": "HOL-Library.Code_Target_Nat"
+    },
+    "runtime_source_hash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "verified_export_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "rows",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "const": "tests/vectors/wire-operations.jsonl"
+        },
+        "rows": {
+          "const": 673
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/member"
+      }
+    },
+    "public_namespace": {
+      "type": "string",
+      "pattern": "^Oracle_Interoperability_Protocol(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "identity_function": {
+      "const": "OIP_Wire_Oracle.code_typed_model_identity"
+    }
+  }
+}

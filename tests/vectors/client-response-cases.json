@@ -1,0 +1,411 @@
+{
+  "schema": "oip-current-client-cases-v1",
+  "status": "fixed expectations, not an execution receipt",
+  "cases": [
+    {
+      "id": "positive-debit",
+      "expected_kind": "debit",
+      "query_opcode": null,
+      "query_words": [],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        1,
+        12,
+        1,
+        2
+      ],
+      "expect_error": null,
+      "expect_unknown": null
+    },
+    {
+      "id": "semantic-wrong-success-code",
+      "expected_kind": "debit",
+      "query_opcode": null,
+      "query_words": [],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        1,
+        10,
+        1,
+        2
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-1-same",
+      "expected_kind": "query",
+      "query_opcode": 1,
+      "query_words": [
+        2,
+        0,
+        1,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-1-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 1,
+      "query_words": [
+        2,
+        0,
+        1,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-2-same",
+      "expected_kind": "query",
+      "query_opcode": 2,
+      "query_words": [
+        2,
+        0,
+        1,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-2-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 2,
+      "query_words": [
+        2,
+        0,
+        1,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-3-same",
+      "expected_kind": "query",
+      "query_opcode": 3,
+      "query_words": [
+        2,
+        1,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-3-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 3,
+      "query_words": [
+        2,
+        1,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-4-same",
+      "expected_kind": "query",
+      "query_opcode": 4,
+      "query_words": [
+        2,
+        0,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-4-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 4,
+      "query_words": [
+        2,
+        0,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-5-same",
+      "expected_kind": "query",
+      "query_opcode": 5,
+      "query_words": [
+        2
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-5-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 5,
+      "query_words": [
+        2
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-6-same",
+      "expected_kind": "query",
+      "query_opcode": 6,
+      "query_words": [
+        2,
+        1,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-6-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 6,
+      "query_words": [
+        2,
+        1,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-7-same",
+      "expected_kind": "query",
+      "query_opcode": 7,
+      "query_words": [
+        2,
+        17
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-7-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 7,
+      "query_words": [
+        2,
+        17
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 76,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-8-same",
+      "expected_kind": "query",
+      "query_opcode": 8,
+      "query_words": [
+        2
+      ],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "query-8-mismatch",
+      "expected_kind": "query",
+      "query_opcode": 8,
+      "query_words": [
+        2
+      ],
+      "embedded": "debit",
+      "response_words": [
+        7,
+        33,
+        3,
+        70,
+        0
+      ],
+      "expect_error": 70,
+      "expect_unknown": null
+    },
+    {
+      "id": "unknown-category-1",
+      "expected_kind": "debit",
+      "query_opcode": null,
+      "query_words": [],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        1,
+        999,
+        0
+      ],
+      "expect_error": null,
+      "expect_unknown": {
+        "kind": 1,
+        "number": 999
+      }
+    },
+    {
+      "id": "unknown-category-2",
+      "expected_kind": "debit",
+      "query_opcode": null,
+      "query_words": [],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        2,
+        999,
+        0
+      ],
+      "expect_error": null,
+      "expect_unknown": {
+        "kind": 2,
+        "number": 999
+      }
+    },
+    {
+      "id": "unknown-category-3",
+      "expected_kind": "debit",
+      "query_opcode": null,
+      "query_words": [],
+      "embedded": "same",
+      "response_words": [
+        7,
+        33,
+        3,
+        999,
+        0
+      ],
+      "expect_error": null,
+      "expect_unknown": {
+        "kind": 3,
+        "number": 999
+      }
+    }
+  ]
+}

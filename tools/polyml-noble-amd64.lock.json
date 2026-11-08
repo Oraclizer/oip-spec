@@ -1,0 +1,48 @@
+{
+  "format": 1,
+  "binding_status": "bound",
+  "distribution": "ubuntu",
+  "version_id": "24.04",
+  "architecture": "amd64",
+  "version": "5.7.1-5build1",
+  "packages": [
+    {
+      "name": "polyml",
+      "file": "polyml_5.7.1-5build1_amd64.deb",
+      "sha256": "5f45fa7afc15f83c18a1273f3fb3da5181d9a2d6bef8617b871121867c80b26d"
+    },
+    {
+      "name": "polyml-modules",
+      "file": "polyml-modules_5.7.1-5build1_amd64.deb",
+      "sha256": "a690843e16ea78fb09e9a5f172e013265975401af3ab4bf5f87980f9cf0785eb"
+    },
+    {
+      "name": "libpolyml9",
+      "file": "libpolyml9_5.7.1-5build1_amd64.deb",
+      "sha256": "73de8c65592163dc64af431c34b8ea747b845f60391a7cd5aead874506d57bd9"
+    }
+  ],
+  "package_metadata_source": "https://packages.ubuntu.com/en/noble/polyml",
+  "copyright_source": "https://changelogs.ubuntu.com/changelogs/pool/universe/p/polyml/polyml_5.7.1-5build1/copyright",
+  "upstream_license": "LGPL-2.1",
+  "upstream_license_source": "https://github.com/polyml/polyml/blob/master/COPYING",
+  "runtime_compatibility": "not-yet-executed-with-the-verified-model",
+  "package_metadata_pages": [
+    {
+      "package": "polyml",
+      "url": "https://packages.ubuntu.com/noble/amd64/polyml/download",
+      "page_sha256": "24df56f6616c99b124f6568b907a510744eca8a03433baa687366ce8c2667b62"
+    },
+    {
+      "package": "polyml-modules",
+      "url": "https://packages.ubuntu.com/noble/amd64/polyml-modules/download",
+      "page_sha256": "34884d3a28dae8f052dd4ae102d4899655ad8ec09563e09c702506d764723699"
+    },
+    {
+      "package": "libpolyml9",
+      "url": "https://packages.ubuntu.com/noble/amd64/libpolyml9/download",
+      "page_sha256": "4420e28939f05f2eafb91549d7b8cfc74021bd56a274009fa2f0aae9f711498c"
+    }
+  ],
+  "copyright_verification": "Upstream COPYING was read; the exact Ubuntu package copyright is retained on installation and its separate URL was not fetched in this authoring task."
+}

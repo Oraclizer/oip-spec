@@ -1,0 +1,114 @@
+{
+  "schema": "oip-typed-response-boundary-input-v1",
+  "ABI": {
+    "entry": "OIP_Wire_Response_Boundary.code_response_result_flat_oracle",
+    "args": [
+      "mode integer:0 received/1 resolution/2 wire error",
+      "reply_values integer list",
+      "retained_present bool",
+      "retained_values integer list"
+    ],
+    "return": [
+      "metadata_ok bool",
+      "model_number integer",
+      "commit_present bool",
+      "commit_position integer"
+    ]
+  },
+  "optional_commit": "Two scalar fields [present,position]; present0 requires position0; present1 retains actual position; other presence is malformed metadata",
+  "accepted_reply_tags": {
+    "0": "Rejected",
+    "1": "Busy",
+    "2": "Reserved",
+    "3": "SourceDispatched",
+    "4": "Debited",
+    "5": "Closed",
+    "6": "Preempted",
+    "7": "TimeObserved",
+    "8": "Recorded",
+    "9": "Credited",
+    "10": "Reconciled",
+    "11": "Refunded",
+    "12": "DataUpdated",
+    "13": "EvidenceRefreshed",
+    "14": "Published"
+  },
+  "outcome": {
+    "Accepted": "[0,accepted_reply_tag,present,position]",
+    "DuplicateDecision": "[1,present,position]",
+    "DuplicateSettlement": "[2,terminal_kind1 confirmed/2 reversed,present,position]",
+    "Rejected": "[3,present,position]",
+    "Busy": "[4,present,position]",
+    "Unavailable": "[5,present,position]"
+  },
+  "collection": {
+    "Collected": "[0] ++ outcome",
+    "Waiting": "[1]",
+    "Rejected": "[2]"
+  },
+  "legal": {
+    "Emitted": "[0,actual_commit_position]",
+    "Applied": "[1,actual_commit_position]",
+    "Refused": "[2,refusal_tag]"
+  },
+  "legal_refusal_tags": {
+    "0": "InvalidAuthority",
+    "1": "InvalidState",
+    "2": "InvalidBinding",
+    "3": "MissingPriorFreeze",
+    "4": "MissingPriorSeizure",
+    "5": "AppealStillOpen",
+    "6": "AppealDeadlineMismatch",
+    "7": "MissingDestination",
+    "8": "ConflictingOrder",
+    "9": "Busy",
+    "10": "Unavailable"
+  },
+  "spend": {
+    "Executed": "[0,actual_root_domain,actual_root_event,actual_commit_position]",
+    "Rejected": "[1]",
+    "Busy": "[2]",
+    "Unavailable": "[3]"
+  },
+  "action_reply_for_mode0": {
+    "Ordinary.Forwarded": "[0,0] ++ collection",
+    "Ordinary.Busy": "[0,1]",
+    "Ordinary.Unavailable": "[0,2]",
+    "Ordinary.Rejected": "[0,3]",
+    "Legal": "[1] ++ legal",
+    "Spend": "[2] ++ spend",
+    "NonExecutedWireReply": "[3]; explicit constant-fallback class from actual source enum, never a supplied wire code"
+  },
+  "retained_receipt": {
+    "Ordinary": "[0] ++ collection",
+    "Legal": "[1] ++ legal",
+    "Spend": "[2] ++ spend"
+  },
+  "resolution_for_mode1": {
+    "Rejected": "[0]",
+    "Published": "[1] ++ retained_receipt",
+    "Unresolved": "[2]"
+  },
+  "wire_error_for_mode2": {
+    "0": "InvalidFormat",
+    "1": "UnsupportedVersion",
+    "2": "InvalidSource",
+    "3": "InvalidSignature",
+    "4": "InvalidThresholdSignature",
+    "5": "TtlExpired",
+    "6": "TtlInvalid",
+    "7": "ReplayConflict",
+    "8": "ProductRejected",
+    "9": "Cancelled",
+    "10": "DeadlineExpired",
+    "11": "ResponseLost",
+    "12": "RequestUnresolved",
+    "13": "Recovery.Endpoint.Rejected",
+    "14": "Recovery.Endpoint.Unavailable",
+    "15": "Recovery.Other"
+  },
+  "wire_error_encoding": "[tag]. Recovery.Other carries only the exact source wildcard class; original source trace must preserve its complete error separately. No computed response number is an input.",
+  "root_equality": "Executed Spend root is preserved in received and retained source values. Helper compares complete root tuple before projecting onto old commit-only source model. Root mismatch cannot create a matching receipt even when commit agrees.",
+  "canonical_metadata": "Mode1/2 require retained_present=false and retained_values=[]; mode0 absent retained requires retained_values=[]; unknown tag/shape/negative/out-of-u64 scalar is metadata failure, not a wire refusal.",
+  "production_scope": "Typed boundary enum fixtures and actual API boundary observations are separate evidence categories. Fixtures alone do not establish dispatcher producer provenance."
+}

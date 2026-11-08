@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc">
+  <title id="title">OIP</title>
+  <desc id="desc">Project banner for the Oracle Interoperability Protocol specification and reference implementation, showing two domains that exchange one signed message frame.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#060b18"/>
+      <stop offset=".62" stop-color="#0a1430"/>
+      <stop offset="1" stop-color="#0c1a3d"/>
+    </linearGradient>
+    <linearGradient id="field-a" x1="48" y1="128" x2="208" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8cc0ff"/>
+      <stop offset="1" stop-color="#2f74f0"/>
+    </linearGradient>
+    <linearGradient id="field-b" x1="208" y1="128" x2="48" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6cf86"/>
+      <stop offset="1" stop-color="#c98b2e"/>
+    </linearGradient>
+    <radialGradient id="ground" cx="50%" cy="43%" r="62%">
+      <stop offset="0" stop-color="#132449"/>
+      <stop offset="1" stop-color="#070e20"/>
+    </radialGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6aa6ff"/>
+      <stop offset=".54" stop-color="#c79d58"/>
+      <stop offset="1" stop-color="#c79d58" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0v40" fill="none" stroke="#9fb6e0" stroke-width="1" opacity=".035"/>
+    </pattern>
+    <filter id="depth" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#01040c" flood-opacity=".42"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="300" rx="24" fill="url(#background)"/>
+  <rect width="1200" height="300" rx="24" fill="url(#grid)"/>
+  <path d="M286 34v232M305 34v232" stroke="#7fa8f0" stroke-width="1" opacity=".12"/>
+  <path d="M336 242h770" stroke="url(#rule)" stroke-width="2"/>
+  <path d="M1090 60h50v50M1140 190v50h-50" fill="none" stroke="#a8bde6" stroke-width="2" opacity=".16"/>
+
+  <g transform="translate(31 4) scale(1.14)">
+    <circle cx="128" cy="128" r="108" fill="#050b1a" opacity=".7"/>
+    <circle cx="128" cy="128" r="106" fill="none" stroke="#6fa8ff" stroke-width="1.5" opacity=".2"/>
+    <circle cx="128" cy="128" r="101" fill="url(#ground)" stroke="#22365e" stroke-width="2"/>
+    <circle cx="128" cy="128" r="90" fill="none" stroke="#7fb2ff" stroke-width="2" stroke-dasharray="1.5 10.28" opacity=".58"/>
+    <circle cx="128" cy="128" r="80" fill="#0a1630" stroke="#2a4170" stroke-width="1.5"/>
+    <g fill="#a9c8ff" opacity=".8">
+      <rect x="125" y="29" width="6" height="12" rx="3"/>
+      <rect x="125" y="215" width="6" height="12" rx="3"/>
+      <rect x="29" y="125" width="12" height="6" rx="3"/>
+      <rect x="215" y="125" width="12" height="6" rx="3"/>
+    </g>
+    <g fill="#d6a85a" opacity=".68">
+      <circle cx="63" cy="63" r="3"/>
+      <circle cx="193" cy="63" r="3"/>
+      <circle cx="193" cy="193" r="3"/>
+      <circle cx="63" cy="193" r="3"/>
+    </g>
+    <g fill="none" stroke="#020814" stroke-width="16" stroke-linecap="round" filter="url(#depth)">
+      <path d="M48 128C60 60 196 60 208 128"/>
+      <path d="M208 128C196 196 60 196 48 128"/>
+    </g>
+    <g fill="none" stroke-width="9" stroke-linecap="round">
+      <path d="M48 128C60 60 196 60 208 128" stroke="url(#field-a)"/>
+      <path d="M208 128C196 196 60 196 48 128" stroke="url(#field-b)"/>
+    </g>
+    <g fill="none" stroke="#dbe6fa" stroke-width="1.5" stroke-linecap="round" opacity=".62">
+      <path d="M58 106C74 56 182 56 198 106"/>
+      <path d="M198 150C182 200 74 200 58 150"/>
+    </g>
+    <path d="M122 69l13 8-13 8Z" fill="#e8f0ff"/>
+    <path d="M134 171l-13 8 13 8Z" fill="#fff1d6"/>
+    <circle cx="48" cy="128" r="7" fill="#cfe0ff" stroke="#0a1630" stroke-width="3"/>
+    <circle cx="208" cy="128" r="7" fill="#f4d49a" stroke="#0a1630" stroke-width="3"/>
+    <circle cx="128" cy="128" r="39" fill="#061023" stroke="#b9c9e6" stroke-width="2.5"/>
+    <circle cx="128" cy="128" r="30" fill="none" stroke="#45608f" stroke-width="1.5" stroke-dasharray="2 5"/>
+    <rect x="106" y="111" width="44" height="34" rx="7" fill="#0d1d3d" stroke="#e3ecff" stroke-width="2.5"/>
+    <path d="M114 120h28M114 128h22M114 136h14" fill="none" stroke="#8fb0e6" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="140" cy="136" r="3.5" fill="#f2c16e"/>
+  </g>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="348" y="65" fill="#8db8ff" font-size="13" font-weight="700" letter-spacing="2.35">ORACLE INTEROPERABILITY PROTOCOL</text>
+    <text x="344" y="130" fill="#f2f5fb" font-size="64" font-weight="750" letter-spacing="1.4">OIP</text>
+    <rect x="348" y="150" width="52" height="4" rx="2" fill="#e8b660"/>
+    <text x="348" y="184" fill="#bccbe6" font-size="20" font-weight="600" letter-spacing="1.05">SPECIFICATION AND REFERENCE IMPLEMENTATION</text>
+    <text x="348" y="224" fill="#98a6c0" font-size="17" letter-spacing=".18">One signed message format  •  recorded outcomes  •  Rust and Go conformance</text>
+  </g>
+</svg>

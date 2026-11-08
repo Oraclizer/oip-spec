@@ -1,0 +1,43 @@
+name: Specification question or counterexample
+description: Challenge a rule, report an ambiguity, or show a case the rules handle wrongly
+title: "[Spec]: "
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Document and section
+      placeholder: spec/wire-conformance.md, Admission, replies and retry
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      placeholder: 40-character commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: Rule or statement
+      description: Quote the sentence or table row in question.
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: Give the counterexample, the two readings that conflict, or the missing case. A message frame or request sequence helps.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed resolution
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security confirmation
+      options:
+        - label: This report contains no private vulnerability or exploit details.
+          required: true

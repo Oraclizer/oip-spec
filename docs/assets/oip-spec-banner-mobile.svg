@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc">
+  <title id="title">OIP mobile project banner</title>
+  <desc id="desc">Mobile project banner for the Oracle Interoperability Protocol specification, with its project mark and full name.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#060b18"/>
+      <stop offset=".62" stop-color="#0a1430"/>
+      <stop offset="1" stop-color="#0c1a3d"/>
+    </linearGradient>
+    <linearGradient id="field-a" x1="45" y1="126" x2="207" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8cc0ff"/>
+      <stop offset="1" stop-color="#2f74f0"/>
+    </linearGradient>
+    <linearGradient id="field-b" x1="207" y1="126" x2="45" y2="158" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6cf86"/>
+      <stop offset="1" stop-color="#c98b2e"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0v32" fill="none" stroke="#9fb6e0" stroke-width="1" opacity=".04"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="320" rx="24" fill="url(#bg)"/>
+  <rect width="640" height="320" rx="24" fill="url(#grid)"/>
+  <path d="M28 72V28h44M568 28h44v44M28 248v44h44M568 292h44v-44" fill="none" stroke="#a8bde6" stroke-width="2" opacity=".16"/>
+
+  <g transform="translate(36 53) scale(.85)">
+    <circle cx="126" cy="126" r="112" fill="#050b1a" stroke="#6fa8ff" stroke-width="2" opacity=".9"/>
+    <circle cx="126" cy="126" r="96" fill="#0a1630" stroke="#2a4170" stroke-width="2"/>
+    <circle cx="126" cy="126" r="82" fill="none" stroke="#7fb2ff" stroke-width="2" stroke-dasharray="2 10" opacity=".62"/>
+    <g fill="none" stroke-width="11" stroke-linecap="round">
+      <path d="M45 126C58 54 194 54 207 126" stroke="url(#field-a)"/>
+      <path d="M207 126C194 198 58 198 45 126" stroke="url(#field-b)"/>
+    </g>
+    <path d="M119 62l15 9-15 9Z" fill="#e8f0ff"/>
+    <path d="M133 172l-15 9 15 9Z" fill="#fff1d6"/>
+    <circle cx="45" cy="126" r="8" fill="#cfe0ff" stroke="#0a1630" stroke-width="4"/>
+    <circle cx="207" cy="126" r="8" fill="#f4d49a" stroke="#0a1630" stroke-width="4"/>
+    <circle cx="126" cy="126" r="43" fill="#061023" stroke="#b9c9e6" stroke-width="3"/>
+    <rect x="101" y="106" width="50" height="40" rx="8" fill="#0d1d3d" stroke="#e3ecff" stroke-width="3"/>
+    <path d="M110 117h32M110 126h25M110 135h16" fill="none" stroke="#8fb0e6" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="141" cy="135" r="4" fill="#f2c16e"/>
+  </g>
+
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="290" y="84" fill="#8db8ff" font-size="13" font-weight="700" letter-spacing="2.1">PROTOCOL SPECIFICATION</text>
+    <text x="286" y="151" fill="#f2f5fb" font-size="52" font-weight="800" letter-spacing="1">OIP</text>
+    <rect x="290" y="172" width="64" height="5" rx="2.5" fill="#e8b660"/>
+    <text x="290" y="218" fill="#c4d1ea" font-size="19" font-weight="650" letter-spacing=".55">ORACLE INTEROPERABILITY</text>
+    <text x="290" y="247" fill="#c4d1ea" font-size="19" font-weight="650" letter-spacing=".55">PROTOCOL</text>
+  </g>
+</svg>

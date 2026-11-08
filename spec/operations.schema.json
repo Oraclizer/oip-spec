@@ -1,0 +1,319 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OIP operation operand table",
+  "description": "Shape of spec/operations.json. scripts/render-operations.py checks the references between entries, the opcode order and the response codes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "table_format", "protocol_version", "title", "summary", "layout_rules", "operation_record",
+    "deadline_modes", "word_types", "blob_types", "enums", "groups", "reference_profile",
+    "responses", "operations"
+  ],
+  "properties": {
+    "table_format": {"const": 1},
+    "protocol_version": {"type": "integer", "minimum": 1},
+    "title": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/text"},
+    "layout_rules": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+    "operation_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message", "order", "fields"],
+      "properties": {
+        "message": {"$ref": "#/$defs/camel"},
+        "order": {"$ref": "#/$defs/text"},
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tag", "name", "wire_type", "label", "description"],
+            "properties": {
+              "tag": {"type": "integer", "minimum": 1, "maximum": 536870911},
+              "name": {"$ref": "#/$defs/snake"},
+              "wire_type": {"enum": ["varint", "fixed64", "length_delimited"]},
+              "label": {"type": "string", "pattern": "^(required|repeated|oneof [a-z][a-z0-9_]*)$"},
+              "description": {"$ref": "#/$defs/text"}
+            }
+          }
+        }
+      }
+    },
+    "deadline_modes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absent", "appeal"],
+      "properties": {
+        "absent": {"$ref": "#/$defs/text"},
+        "appeal": {"$ref": "#/$defs/text"}
+      }
+    },
+    "word_types": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/snake"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {"description": {"$ref": "#/$defs/text"}}
+      }
+    },
+    "blob_types": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/snake"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "length": {"type": "integer", "minimum": 1},
+          "min_length": {"type": "integer", "minimum": 1},
+          "description": {"$ref": "#/$defs/text"}
+        },
+        "not": {"required": ["length", "min_length"]}
+      }
+    },
+    "enums": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/snake"},
+      "additionalProperties": {"$ref": "#/$defs/enum"}
+    },
+    "groups": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/snake"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "fields"],
+        "properties": {
+          "description": {"$ref": "#/$defs/text"},
+          "fields": {"$ref": "#/$defs/fields"}
+        }
+      }
+    },
+    "reference_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "unsupported_operation_refusal"],
+      "properties": {
+        "description": {"$ref": "#/$defs/text"},
+        "unsupported_operation_refusal": {"$ref": "#/$defs/upper"}
+      }
+    },
+    "responses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["call_identifier", "delivery_and_refusal"],
+      "properties": {
+        "call_identifier": {"$ref": "#/$defs/text"},
+        "delivery_and_refusal": {"$ref": "#/$defs/text"}
+      }
+    },
+    "operations": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/operation"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "snake": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "upper": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+    "camel": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$"},
+    "code": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615},
+    "enum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "values"],
+      "properties": {
+        "description": {"$ref": "#/$defs/text"},
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {"min": {"$ref": "#/$defs/code"}, "max": {"$ref": "#/$defs/code"}}
+        },
+        "values": {"type": "array", "items": {"$ref": "#/$defs/enum_value"}}
+      }
+    },
+    "enum_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": {"$ref": "#/$defs/code"},
+        "name": {"$ref": "#/$defs/upper"},
+        "description": {"$ref": "#/$defs/text"},
+        "body_field": {"$ref": "#/$defs/snake"},
+        "kind": {"type": "integer", "minimum": 1},
+        "commit": {"type": "boolean"}
+      }
+    },
+    "accepted": {
+      "oneOf": [
+        {"const": "all"},
+        {"const": "any"},
+        {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/code"}}
+      ]
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {"$ref": "#/$defs/snake"},
+        "enum": {"$ref": "#/$defs/snake"},
+        "accepted": {"$ref": "#/$defs/accepted"}
+      },
+      "if": {"properties": {"type": {"const": "code"}}},
+      "then": {"required": ["enum", "accepted"]},
+      "else": {"not": {"anyOf": [{"required": ["enum"]}, {"required": ["accepted"]}]}}
+    },
+    "word": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "type"],
+      "properties": {
+        "kind": {"const": "word"},
+        "name": {"$ref": "#/$defs/snake"},
+        "type": {"$ref": "#/$defs/snake"},
+        "enum": {"$ref": "#/$defs/snake"},
+        "accepted": {"$ref": "#/$defs/accepted"},
+        "description": {"$ref": "#/$defs/text"}
+      },
+      "if": {"properties": {"type": {"const": "code"}}},
+      "then": {"required": ["enum", "accepted"]},
+      "else": {"not": {"anyOf": [{"required": ["enum"]}, {"required": ["accepted"]}]}}
+    },
+    "optional": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "fields"],
+      "properties": {
+        "kind": {"const": "optional"},
+        "name": {"$ref": "#/$defs/snake"},
+        "description": {"$ref": "#/$defs/text"},
+        "fields": {"$ref": "#/$defs/fields", "minItems": 1}
+      }
+    },
+    "counted_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "item"],
+      "properties": {
+        "kind": {"const": "counted_set"},
+        "name": {"$ref": "#/$defs/snake"},
+        "description": {"$ref": "#/$defs/text"},
+        "item": {"$ref": "#/$defs/item"}
+      }
+    },
+    "counted_pairs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "first", "second"],
+      "properties": {
+        "kind": {"const": "counted_pairs"},
+        "name": {"$ref": "#/$defs/snake"},
+        "description": {"$ref": "#/$defs/text"},
+        "first": {"$ref": "#/$defs/word"},
+        "second": {"$ref": "#/$defs/word"}
+      }
+    },
+    "tagged": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "enum", "cases"],
+      "properties": {
+        "kind": {"const": "tagged"},
+        "name": {"$ref": "#/$defs/snake"},
+        "description": {"$ref": "#/$defs/text"},
+        "enum": {"$ref": "#/$defs/snake"},
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "fields"],
+            "properties": {
+              "code": {"$ref": "#/$defs/code"},
+              "fields": {"$ref": "#/$defs/fields"}
+            }
+          }
+        }
+      }
+    },
+    "use": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "group"],
+      "properties": {
+        "kind": {"const": "use"},
+        "group": {"$ref": "#/$defs/snake"}
+      }
+    },
+    "field": {
+      "oneOf": [
+        {"$ref": "#/$defs/word"},
+        {"$ref": "#/$defs/optional"},
+        {"$ref": "#/$defs/counted_set"},
+        {"$ref": "#/$defs/counted_pairs"},
+        {"$ref": "#/$defs/tagged"},
+        {"$ref": "#/$defs/use"}
+      ]
+    },
+    "fields": {"type": "array", "items": {"$ref": "#/$defs/field"}},
+    "blob": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": {"$ref": "#/$defs/snake"},
+        "type": {"$ref": "#/$defs/snake"},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["when", "rule", "error"],
+      "properties": {
+        "when": {"enum": ["decode", "consumer"]},
+        "rule": {"$ref": "#/$defs/text"},
+        "error": {"$ref": "#/$defs/upper"}
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family", "opcode", "name", "title", "summary", "reference_accepts", "words", "blobs",
+        "deadline", "call"
+      ],
+      "properties": {
+        "family": {"type": "integer", "minimum": 1},
+        "opcode": {"type": "integer", "minimum": 1},
+        "name": {"$ref": "#/$defs/camel"},
+        "title": {"type": "string", "pattern": "^[a-z][a-z ]*[a-z]$"},
+        "summary": {"$ref": "#/$defs/text"},
+        "reference_accepts": {"type": "boolean"},
+        "reference_note": {"$ref": "#/$defs/text"},
+        "words": {"$ref": "#/$defs/fields"},
+        "blobs": {"type": "array", "items": {"$ref": "#/$defs/blob"}},
+        "deadline": {"enum": ["absent", "appeal"]},
+        "target_domain": {"$ref": "#/$defs/snake"},
+        "checks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/check"}},
+        "call": {"type": "boolean"},
+        "recorded_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/code"}
+        }
+      },
+      "if": {"properties": {"call": {"const": true}}},
+      "then": {"required": ["recorded_codes"]},
+      "else": {"not": {"required": ["recorded_codes"]}}
+    }
+  }
+}

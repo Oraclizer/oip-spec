@@ -1,0 +1,64 @@
+syntax = "proto2";
+package oip.v06;
+option go_package = "github.com/Oraclizer/oip-spec/go/wirepb";
+
+// The canonical OIP v0.6 wire schema. Receivers accept only the canonical
+// encoding of these messages and reject unknown fields; the encoding rules are
+// in spec/wire-conformance.md. New fields enter only through a new negotiated
+// version.
+
+message Packet {
+  optional Core core = 1;
+  optional bytes signature = 2;
+}
+
+message Core {
+  optional uint64 version = 1;
+  optional uint64 purpose = 2;
+  optional fixed64 deployment = 3;
+  optional fixed64 source_domain = 4;
+  optional fixed64 target_domain = 5;
+  optional fixed64 principal = 6;
+  optional fixed64 key_id = 7;
+  optional fixed64 authority_epoch = 8;
+  optional fixed64 issued_seconds = 9;
+  optional fixed64 ttl_seconds = 10;
+  optional bytes uuid = 11;
+  optional uint64 family = 12;
+  optional uint64 primary = 13;
+  optional uint64 secondary = 14;
+  optional uint64 signature_scheme = 15;
+  // Exactly one member is present, and its tag is 15 plus the family.
+  oneof body {
+    Operation state_sync = 16;
+    Operation regulatory_action = 17;
+    Operation lock_management = 18;
+    Operation query = 19;
+    Operation ack = 20;
+    Operation heartbeat = 21;
+    Operation governance = 22;
+  }
+  optional uint64 atomicity = 23;
+  optional uint64 priority = 24;
+  optional fixed64 route_scope = 25;
+}
+
+// An operation carries positional operands. The family of the enclosing body
+// member and the opcode fix the meaning and order of every entry in words and
+// blobs. The field-meaning table spec/operations.json lists, for each family
+// and opcode, the positions, enumerations and whether the reference
+// configuration accepts the operation.
+message Operation {
+  optional uint64 opcode = 1;
+  repeated fixed64 words = 2 [packed = false];
+  repeated bytes blobs = 3;
+  // The appeal deadline of a regulatory action (family 2). Operations of
+  // other families reject both members. In this version an absent member and
+  // appeal_deadline_indefinite both mean that no appeal deadline applies.
+  oneof appeal_deadline {
+    // Only the value true is canonical.
+    bool appeal_deadline_indefinite = 4;
+    // Unix time in UTC seconds.
+    fixed64 appeal_deadline_utc_seconds = 5;
+  }
+}

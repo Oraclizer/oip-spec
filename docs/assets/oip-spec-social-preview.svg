@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+<title id="title">OIP: Oracle Interoperability Protocol</title>
+<desc id="desc">v0.6.0 prototype. specification / Rust reference / Go bindings.</desc>
+<defs>
+  <linearGradient id="background" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060b18"/><stop offset=".62" stop-color="#0a1430"/><stop offset="1" stop-color="#0c1a3d"/></linearGradient>
+  <linearGradient id="field-a" x1="112" y1="0" x2="368" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8cc0ff"/><stop offset="1" stop-color="#2f74f0"/></linearGradient>
+  <linearGradient id="field-b" x1="112" y1="0" x2="368" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c98b2e"/><stop offset="1" stop-color="#f6cf86"/></linearGradient>
+ </defs>
+<g font-family="Segoe UI,Arial,sans-serif">
+<rect width="1280" height="640" fill="url(#background)"/>
+<path d="M0 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M40 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M80 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M120 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M160 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M200 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M240 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M280 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M320 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M360 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M400 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M440 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M480 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M520 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M560 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M600 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M640 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M680 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M720 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M760 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M800 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M840 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M880 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M920 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M960 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1000 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1040 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1080 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1120 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1160 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1200 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1240 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M1280 0V640" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 0H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 40H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 80H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 120H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 160H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 200H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 240H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 280H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 320H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 360H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 400H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 440H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 480H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 520H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 560H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 600H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M0 640H1280" fill="none" stroke="#9fb6e0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.035"/>
+<path d="M64 120V64H120" fill="none" stroke="#a8bde6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.16"/>
+<path d="M1160 64H1216V120" fill="none" stroke="#a8bde6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.16"/>
+<path d="M64 520V576H120" fill="none" stroke="#a8bde6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.16"/>
+<path d="M1160 576H1216V520" fill="none" stroke="#a8bde6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.16"/>
+<path d="M452 130V510" fill="none" stroke="#7fa8f0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.16"/>
+<path d="M468 130V510" fill="none" stroke="#7fa8f0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.08"/>
+<circle cx="240.0" cy="320.0" r="172.8" fill="#050b1a" opacity="0.9"/>
+<circle cx="240.0" cy="320.0" r="169.60000000000002" fill="none" stroke="#6fa8ff" stroke-width="2.4000000000000004" opacity="0.3"/>
+<circle cx="240.0" cy="320.0" r="161.60000000000002" fill="#101e3d" stroke="#22365e" stroke-width="3.2" opacity="1"/>
+<circle cx="240.0" cy="320.0" r="144.0" fill="none" stroke="#7fb2ff" stroke-width="3.2" stroke-dasharray="2.4 16.448" opacity="0.58"/>
+<circle cx="240.0" cy="320.0" r="128.0" fill="#0a1630" stroke="#2a4170" stroke-width="2.4000000000000004" opacity="1"/>
+<rect x="235.2" y="161.6" width="9.600000000000001" height="19.200000000000003" rx="4.8" fill="#a9c8ff" opacity="0.8"/>
+<rect x="235.2" y="459.20000000000005" width="9.600000000000001" height="19.200000000000003" rx="4.8" fill="#a9c8ff" opacity="0.8"/>
+<rect x="81.6" y="315.2" width="19.200000000000003" height="9.600000000000001" rx="4.8" fill="#a9c8ff" opacity="0.8"/>
+<rect x="379.20000000000005" y="315.2" width="19.200000000000003" height="9.600000000000001" rx="4.8" fill="#a9c8ff" opacity="0.8"/>
+<circle cx="136.0" cy="216.0" r="4.800000000000001" fill="#d6a85a" opacity="0.68"/>
+<circle cx="344.0" cy="216.0" r="4.800000000000001" fill="#d6a85a" opacity="0.68"/>
+<circle cx="344.0" cy="424.0" r="4.800000000000001" fill="#d6a85a" opacity="0.68"/>
+<circle cx="136.0" cy="424.0" r="4.800000000000001" fill="#d6a85a" opacity="0.68"/>
+<path d="M112.0 320.0C131.2 211.2 348.8 211.2 368.0 320.0" fill="none" stroke="#020814" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M368.0 320.0C348.8 428.8 131.2 428.8 112.0 320.0" fill="none" stroke="#020814" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M112.0 320.0C131.2 211.2 348.8 211.2 368.0 320.0" fill="none" stroke="url(#field-a)" stroke-width="14.4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M368.0 320.0C348.8 428.8 131.2 428.8 112.0 320.0" fill="none" stroke="url(#field-b)" stroke-width="14.4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M128.0 284.8C153.6 204.8 326.4 204.8 352.0 284.8" fill="none" stroke="#dbe6fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.62"/>
+<path d="M352.0 355.2C326.4 435.2 153.6 435.2 128.0 355.2" fill="none" stroke="#dbe6fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.62"/>
+<path d="M230.4 225.6L251.2 238.39999999999998L230.4 251.2Z" fill="#e8f0ff" opacity="1"/>
+<path d="M249.6 388.8L228.8 401.6L249.6 414.4Z" fill="#fff1d6" opacity="1"/>
+<circle cx="112.0" cy="320.0" r="11.200000000000001" fill="#cfe0ff" stroke="#0a1630" stroke-width="4.800000000000001" opacity="1"/>
+<circle cx="368.0" cy="320.0" r="11.200000000000001" fill="#f4d49a" stroke="#0a1630" stroke-width="4.800000000000001" opacity="1"/>
+<circle cx="240.0" cy="320.0" r="62.400000000000006" fill="#061023" stroke="#b9c9e6" stroke-width="4.0" opacity="1"/>
+<circle cx="240.0" cy="320.0" r="48.0" fill="none" stroke="#45608f" stroke-width="2.4000000000000004" stroke-dasharray="3.2 8" opacity="1"/>
+<rect x="204.8" y="292.8" width="70.4" height="54.4" rx="11.2" fill="#0d1d3d" opacity="1"/>
+<path d="M211.2 292.8L268.8 292.8L275.2 299.2L275.2 340.8L268.8 347.2L211.2 347.2L204.8 340.8L204.8 299.2L211.2 292.8" fill="none" stroke="#e3ecff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M217.6 307.2H262.4" fill="none" stroke="#8fb0e6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M217.6 320.0H252.8" fill="none" stroke="#8fb0e6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<path d="M217.6 332.8H240.0" fill="none" stroke="#8fb0e6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<circle cx="259.2" cy="332.8" r="5.6000000000000005" fill="#f2c16e" opacity="1"/>
+<text x="516" y="263" fill="#f2f5fb" font-size="112" font-weight="700">OIP</text>
+<text x="520" y="329" fill="#bccbe6" font-size="31" font-weight="400">Oracle Interoperability Protocol</text>
+<rect x="520" y="361" width="70" height="5" rx="2.5" fill="#e8b660" opacity="1"/>
+<text x="520" y="413" fill="#f2c16e" font-size="27" font-weight="400">v0.6.0 prototype</text>
+<text x="520" y="480" fill="#98a6c0" font-size="22" font-weight="400">specification / Rust reference / Go bindings</text>
+</g>
+</svg>

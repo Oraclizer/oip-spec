@@ -1,0 +1,163 @@
+{
+  "schema": "oip-full-response-integer-abi-v1",
+  "status": "-1 malformed metadata; -2 unfilled primitive request;0 success;positive exact wire refusal;sender signature unavailable51. Any unexpected missing primitive callback aborts compiled evaluation and must fail the strict consumer.",
+  "module": "OIP_Wire_Response_Boundary",
+  "common_sender_args": [
+    "context integer list list",
+    "mode integer",
+    "typedReply integer list",
+    "retainedPresent bool",
+    "typedRetained integer list",
+    "rawOriginalPacket integer list",
+    "hashRows integer list list",
+    "signRows integer list list",
+    "verifyRows integer list list"
+  ],
+  "sender_context_rows": {
+    "0": [
+      "negotiated version",
+      "channel deployment",
+      "channel local endpoint",
+      "channel remote endpoint",
+      "channel expires"
+    ],
+    "1": "profile families list",
+    "2": "profile atomicities list",
+    "3": "profile schemes list",
+    "4": "channel local public key32bytes",
+    "5": "channel remote public key32bytes",
+    "6": [
+      "config deployment",
+      "config local principal",
+      "config local key id",
+      "config authority epoch",
+      "config route scope",
+      "config response ttl",
+      "config max nesting"
+    ],
+    "7": "config local endpoint list",
+    "8": "config response peer domain list; duplicate domains with distinct keys are preserved by paired keys",
+    "9": "config public key32bytes",
+    "10": "actual immutable policy_binding32bytes",
+    "11": [
+      "site profile deployment",
+      "site profile format",
+      "site profile authority",
+      "ordered-control present0/1",
+      "security ordered-profile present0/1",
+      "security profile deployment",
+      "security profile format",
+      "security profile authority"
+    ],
+    "12": [
+      "parameters clock present0/1",
+      "parameters clock value",
+      "signing clock present0/1",
+      "signing clock value"
+    ],
+    "13": [
+      "frame limit"
+    ],
+    "14+": "one32byte peer key row per domain in row8; exactly14+peer_count rows"
+  },
+  "client_context_rows": {
+    "0": [
+      "negotiated version",
+      "channel deployment",
+      "local",
+      "remote",
+      "expires"
+    ],
+    "1": "profile families",
+    "2": "profile atomicities",
+    "3": "profile schemes",
+    "4": "local public key32bytes",
+    "5": "remote public key32bytes",
+    "6": [
+      "boundary deployment",
+      "source",
+      "target",
+      "principal",
+      "key id",
+      "epoch",
+      "route scope",
+      "now",
+      "asset TTL floor",
+      "future skew",
+      "max frame",
+      "version floor",
+      "max nesting"
+    ],
+    "7": [
+      "critical allowed0/1"
+    ],
+    "8": "current client public key32bytes"
+  },
+  "primitive_transcript": {
+    "hashRows": "alternating[preimageBytes,digest32Bytes] rows, unique preimage keys",
+    "signRows": "triples[publicKey32Bytes,modelPreimageBytes,signature64Bytes], unique(key,preimage)",
+    "verifyRows": "quadruples[publicKey32Bytes,modelPreimageBytes,signatureBytes,[verdict0/1]], unique(key,preimage,signature)",
+    "boundaries": "Broker independently invokes SHA256/Ed25519 on exactly the model requests. Source-observed digest/UUID/signature/preimage/packet is not a sender input. Missing lookup is failclosed metadata/unexpected runtime error; never replace it with false verification or an empty signed answer."
+  },
+  "primitive_requests": "each output row is[kind]++length-prefixed fields; kind0 hash:[msg];kind1 sign:[key,msg];kind2 verify:[key,msg,sig]. Each field is[length,octets...]. Catalog may include unused verification requests; it is not an actual source call trace.",
+  "entries": {
+    "code_response_egress_queries_flat": "common_sender_args -> (metadataStatus integer,missingRequestRows integer list list)",
+    "code_response_encode_boundary_queries_flat": "same; excludes original preflight verifier request and models only encode_response typed boundary",
+    "code_response_egress_flat_oracle": "common_sender_args -> (status integer,successOutputRows integer list list); consumes existing response_fixed_encode_for_received_original",
+    "code_response_encode_boundary_flat_oracle": "common_sender_args -> same output; consumes existing response_fixed_encode after model canonical decode/caller selection; matches207 source enum egress fixtures without claiming dispatcher/original-preflight provenance",
+    "code_response_admit_queries_flat": "clientContext,canonicalExpectedPacket,networkResponsePacket,verifyRows -> (metadataStatus,missingVerifyRequests)",
+    "code_response_admit_flat_oracle": "same -> (status integer,acceptedResult integer list); consumes existing current response_fixed_admit",
+    "code_response_egress_and_admit_flat_oracle": "common_sender_args plusclientContext/clientVerifyRows -> (senderStatus,senderRows,clientStatus,clientResult); received packet is internal model sender output, no source observed packet input",
+    "code_response_egress_prefix_flat": "common_sender_args -> (metadataStatus integer,prefixRows integer list list); original preflight must succeed before exposing any response prefix",
+    "code_response_encode_boundary_prefix_flat": "same; explicit lower encoder boundary observations without dispatcher/original-preflight provenance"
+  },
+  "sender_success_rows": {
+    "0": "converted[namespace,sequence,kind,number,commitPresent,position]",
+    "1": "actual verified postcheck tuple in same6field shape",
+    "2": "response words",
+    "3": "canonical original Core",
+    "4": "binding preimage",
+    "5": "binding digest from model-request primitive",
+    "6": "UUID hash preimage",
+    "7": "UUID digest from model-request primitive",
+    "8": "derived UUID",
+    "9": "canonical response Core",
+    "10": "signing ENVELOPE preimage",
+    "11": "model-request signature",
+    "12": "canonical signed response packet",
+    "13": "parameters[principal,key,epoch,issued,ttl,route]",
+    "14": "two input clock records[pPresent,pValue,sPresent,sValue]"
+  },
+  "client_success_result": "[namespace,sequence,kind,number,commitPresent,position,statusKnown0/1,statusKind,statusNumber]; typed Known/Unknown is consumed, not inferred from an accept bit",
+  "client_input_scope": "Standalone client receives its original network fixture input or model-produced packet. Sender observed response output is never fed back as a model sender answer. Combined entry internally forwards model-generated bytes.",
+  "original_scope_partition": "original dispatcher15 calls/noncall10/filter6 unchanged.207 typed enum fixtures are lower source encoder boundary controls and do not establish those original dispatcher producers.",
+  "finalSourceFP": null,
+  "publicNamespace": null,
+  "exportReceipt": null,
+  "prefix_rows": {
+    "0": "model converted[number,commitPresent,position]",
+    "1": "response words or[]",
+    "2": "selected atomicity singleton or[]",
+    "3": "canonical original Core",
+    "4": "binding preimage or[]",
+    "5": "binding digest or[]",
+    "6": "UUID hash preimage or[]",
+    "7": "UUID digest or[]",
+    "8": "derived UUID or[]",
+    "9": "parameters[principal,key,epoch,issued,ttl,route] or[]",
+    "10": "canonical response Core before signer or[]",
+    "11": "actual model signer-method attempt preimage or[]",
+    "12": "computed signer guard permitted[0/1] or[]",
+    "13": "curve signature64bytes only when guard permits and exact transcript record exists; otherwise[]"
+  },
+  "prefix_scope": "Not final sender success or a returned packet. A sign-method attempt can contain a preimage yet be rejected before the Ed25519 curve primitive. This preserves source guard-None cases without supplying None as a primitive signature answer.",
+  "planner_order": "The whole sender runs the existing original preflight with a lookup-aware verifier probe. A missing original verification yields only that keyed original request. No binding,UUID or signer request is exposed before actual keyed verification permits that preflight. Final protocol values always use strict callbacks and exact old sender/client functions.",
+  "full_only_absent_boundary_result": {
+    "mode": 3,
+    "reply_values": [],
+    "retained_present": false,
+    "retained_values": [],
+    "meaning": "No actual typed product boundary result exists. Whole sender uses exact original preflight only; its refusal70/71 etc is preserved. If preflight admits a caller operation, absence is incomplete metadata -1 and no response is signed. Boundary-only encode entry rejects mode3. No dummy Outcome is constructed.",
+    "scope": "Original31=15caller operation branches +10noncaller reference operations +6configured refusals. This is not a count of external API stimuli in the separate15-row replay episode."
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "schema": "oip-reference-replay-contract-v1",
+  "input": {
+    "path": "tests/vectors/reference-replay-inputs.jsonl",
+    "sha256": "dbc836771c3e63478fb759740a4fa42d11f74065f74e0fd86d6c48a932cbdbe0",
+    "rows": 15,
+    "genesis_rows": 2,
+    "stimulus_rows": 13,
+    "ids": [
+      "a.0",
+      "a.1",
+      "a.2",
+      "a.3",
+      "a.4",
+      "a.5",
+      "a.6",
+      "a.7",
+      "a.8",
+      "a.9",
+      "b.0",
+      "b.1",
+      "b.2",
+      "b.3",
+      "b.4"
+    ]
+  },
+  "original_input": {
+    "path": "tests/vectors/reference-replay-original-inputs.jsonl",
+    "sha256": "d13a4194acea4a7417e45b1a410cfac1b3ab6f38db73ec7c8a4297eb5cdb376d",
+    "rows": 15,
+    "genesis_rows": 2,
+    "stimulus_rows": 13,
+    "ids": [
+      "a.0",
+      "a.1",
+      "a.2",
+      "a.3",
+      "a.4",
+      "a.5",
+      "a.6",
+      "a.7",
+      "a.8",
+      "a.9",
+      "b.0",
+      "b.1",
+      "b.2",
+      "b.3",
+      "b.4"
+    ]
+  },
+  "same_cut_input": {
+    "path": "tests/vectors/reference-same-cut-inputs.jsonl",
+    "sha256": "7c487b49b6e0ac3d87ca8d01688caa4a1a6da5b02cc80392282ab90ce66f9c3c",
+    "rows": 3,
+    "genesis_rows": 1,
+    "stimulus_rows": 2,
+    "ids": [
+      "c.0",
+      "c.1",
+      "c.2"
+    ]
+  },
+  "transport_conformance": {
+    "fixed_rows": 161,
+    "seeded_rows": 512,
+    "total_rows": 673,
+    "corpus_path": "tests/vectors/wire-operations.jsonl",
+    "corpus_sha256": "7191613236625c876f41976c44cc98cf1047876e319ee7c03abfe6bb0a1e8588",
+    "scope": "transport admission and retained canonical Core binding"
+  },
+  "financial_conformance": {
+    "semantic_scope": "finite-financial-raw-slice-v1",
+    "selected_ids": [
+      "a.0",
+      "a.1",
+      "a.2",
+      "a.3",
+      "b.0",
+      "b.1",
+      "b.2",
+      "b.3"
+    ],
+    "seed_rows": 2,
+    "raw_step_rows": 6,
+    "scope": "Finite seed, original raw Reserve/Dispatch/Debit selector, credential/payer, produced financial outcome and commit projections",
+    "excludes": [
+      "Actual token/cryptographic authentication",
+      "Current-service equality",
+      "Retained retry/full resolver",
+      "Exact storage bytes"
+    ]
+  },
+  "full_replay_required_capabilities": [
+    "Input-only genesis and raw stimuli",
+    "Actual authentication and source signing relation",
+    "Produced retained calls and result provenance",
+    "Current cut and current-service outcome",
+    "Signed response admission and resolver results",
+    "Exact selected journal/control/head/offset/digest byte observations"
+  ],
+  "same_cut_scope": {
+    "source": "duration-zero refusal followed by normal Reserve at the same signed cut",
+    "paired_model": "required-unbound",
+    "conformance_rows": 3
+  },
+  "signed_response_scope": {
+    "cases": 18,
+    "actual_api": "admit_response",
+    "actual_signer": "Ed25519Security",
+    "semantic_negative": "Removing only original-byte comparison changes Query1..7 mismatch from 76 to 70",
+    "Query8": "Depth-one expected decoding returns 70 before original-byte comparison"
+  },
+  "non_claims": [
+    "Universal Rust/Go refinement",
+    "Whole replay executable model agreement",
+    "Current-service paired model agreement",
+    "Full resolver/StoredCall provenance",
+    "Exact journal/control/head/offset/digest byte agreement with a model",
+    "External store or live-service correctness",
+    "Public artifact availability",
+    "Full verification or independent assurance completion"
+  ]
+}

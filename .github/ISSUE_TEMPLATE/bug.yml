@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible defect in the Rust or Go reference code
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities here. Follow SECURITY.md for private reporting.
+  - type: input
+    id: revision
+    attributes:
+      label: Revision
+      description: Commit SHA or tag
+      placeholder: 40-character commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: implementation
+    attributes:
+      label: Affected implementation
+      options:
+        - Rust
+        - Go
+        - Both, or Rust and Go disagree
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, architecture, and Rust, Go or Python versions
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Commands, a failing test, or the message frame in hexadecimal
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include response codes and error names
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Cite the specification section that requires it, if one applies
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Report hygiene
+      options:
+        - label: I removed credentials, private data and local absolute paths.
+          required: true
+        - label: This is not an undisclosed security vulnerability.
+          required: true
