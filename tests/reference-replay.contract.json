@@ -61,11 +61,11 @@
     ]
   },
   "transport_conformance": {
-    "fixed_rows": 161,
+    "fixed_rows": 180,
     "seeded_rows": 512,
-    "total_rows": 673,
+    "total_rows": 692,
     "corpus_path": "tests/vectors/wire-operations.jsonl",
-    "corpus_sha256": "7191613236625c876f41976c44cc98cf1047876e319ee7c03abfe6bb0a1e8588",
+    "corpus_sha256": "c922ebc8b0d150e6aae17e8962f4a1bf9f232aa8e5a01b21b3b4b0eac6f6889b",
     "scope": "transport admission and retained canonical Core binding"
   },
   "financial_conformance": {

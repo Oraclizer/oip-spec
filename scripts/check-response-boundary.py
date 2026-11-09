@@ -47,7 +47,7 @@ def check_missing_record(model,result,kind):
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--source-output",type=Path,required=True,help="Actual207 converter/encoder source receipt root")
-    ap.add_argument("--operations-output",type=Path,required=True,help="Actual31 original operations and21 current clients")
+    ap.add_argument("--operations-output",type=Path,required=True,help="Actual33 original operations and21 current clients")
     ap.add_argument("--output",type=Path,required=True);ap.add_argument("--polyml");ap.add_argument("--artifact-root",type=Path)
     ap.add_argument("--primitive-executable",type=Path,help="Exact local test provider built from the current source")
     ap.add_argument("--cargo",default="cargo");args=ap.parse_args()
@@ -66,9 +66,9 @@ def main():
     operation_inputs=read_rows(original/"inputs.jsonl");operation_observed=read_rows(original/"observations.jsonl")
     current_inputs=read_rows(args.operations_output/"source/client-values/inputs.jsonl");current_observed=read_rows(args.operations_output/"source/client-values/observations.jsonl")
     contexts={row["id"]:row for row in read_rows(original/"client-contexts.jsonl")}
-    if len(boundary_inputs)!=207 or len(operation_inputs)!=31 or len(current_inputs)!=21:raise MetadataError("Declared original/lower/current case coverage changed")
+    if len(boundary_inputs)!=207 or len(operation_inputs)!=33 or len(current_inputs)!=21:raise MetadataError("Declared original/lower/current case coverage changed")
     classes={name:sum(row["branch_class"]==name for row in operation_inputs) for name in ["caller","noncaller","configured-refusal"]}
-    if list(classes.values())!=[15,10,6]:raise MetadataError("Original operation branch partition changed")
+    if list(classes.values())!=[17,11,5]:raise MetadataError("Original operation branch partition changed")
     for row in boundary_inputs:sender_input(row,"boundary")
     for row in operation_inputs:sender_input(row,"full")
     bundle=hashlib.sha256(json.dumps(members,sort_keys=True).encode("ascii")).hexdigest()

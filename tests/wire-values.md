@@ -37,14 +37,14 @@ refusal checks remain the source behavior; the semantic projection observes
 them without redefining their admission decisions.
 
 The new model entry is
-`OIP_Wire_Oracle.code_typed_transport_flat_oracle`. Its eight outputs are status,
+`OIP_Wire_Oracle_V061.sync_v061_nested_transport_flat`. Its eight outputs are status,
 binding presence/bytes, summary presence, typed IR, canonical Core bytes,
 signing-preimage bytes and transport-key IR. The driver calls the distinct
 `code_typed_model_identity ()`; the earlier accept/binding ABI and its identity
 cannot approve this interface.
 
 The semantic identity has six fields: schema `1`, ABI
-`intinf-wire-values-v2`, scope `wire-v6-general-31-values`, the typed entrypoint,
+`intinf-wire-values-v2`, scope `wire-v6-general-33-values`, the typed entrypoint,
 `HOL-Library.Code_Target_Nat`, and the final independently checked source
 fingerprint. The model computes these values from its own decoded inputs and
 independent identity constants. No source output, expected verdict, public code

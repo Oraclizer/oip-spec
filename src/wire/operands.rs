@@ -2,7 +2,7 @@
 //! canonical operation and never from a second request.
 
 use super::codec::{Result, Unsigned256, WireError, body, decode_core};
-use super::generated::{Core, Operation, core::Body, operation::AppealDeadline};
+use super::generated::{Core, Operation, operation::AppealDeadline};
 use super::negotiation::Offer;
 use crate::authority::identity::Handover;
 use crate::authority::recovery::wire::response::{ResponseCode, ResponseStatus};

@@ -1,6 +1,6 @@
 {
   "format": "oip-runtime-source-v1",
-  "scope": "wire-v6-general-31-values",
+  "scope": "wire-v6-general-33-values",
   "hash_algorithm": "sha256-canonical-path-digest-list",
   "files": [
     "Cargo.lock",
@@ -47,6 +47,9 @@
     "tests/vectors/reference-replay-original-inputs.jsonl",
     "tests/vectors/reference-same-cut-inputs.jsonl",
     "tests/vectors/signed-response-cases.json",
+    "tests/vectors/sync-structure-vectors.tsv",
+    "tests/vectors/v0.6.0/wire-operations.jsonl",
+    "tests/vectors/write-core-vectors.tsv",
     "tests/wire-model.schema.json",
     "tests/wire-values-driver.ML",
     "tools/polyml-noble-amd64.lock.json"

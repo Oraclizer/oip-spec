@@ -13,11 +13,11 @@ import re
 import stat
 import urllib.request
 
-SCOPE="wire-v6-general-31-values"
+SCOPE="wire-v6-general-33-values"
 ABI="intinf-wire-values-v2"
-ENTRY="OIP_Wire_Oracle.code_typed_transport_flat_oracle"
+ENTRY="OIP_Wire_Oracle_V061.sync_v061_nested_transport_flat"
 NAT_REFINEMENT="HOL-Library.Code_Target_Nat"
-IDENTITY_FUNCTION="OIP_Wire_Oracle.code_typed_model_identity"
+IDENTITY_FUNCTION="OIP_Wire_Oracle_V061.sync_v061_typed_model_identity"
 ROLES={"model":"oip_wire_oracle.ML","driver":"mirror-driver.ML","origin":"export-origin.json","diagnostics":"compiler-diagnostics.json"}
 MAX_BLOB_BYTES=16*1024*1024
 
@@ -61,7 +61,7 @@ def read_lock(path):
     digest(lock["runtime_source_hash"],64,"runtime source hash")
     digest(lock["verified_export_sha256"],64,"verified export SHA-256")
     exact_keys(lock["corpus"],["path","rows","sha256"],"corpus pin")
-    if lock["corpus"]["path"]!="tests/vectors/wire-operations.jsonl" or lock["corpus"]["rows"]!=673:
+    if lock["corpus"]["path"]!="tests/vectors/wire-operations.jsonl" or lock["corpus"]["rows"]!=692:
         raise ValueError("Unexpected required corpus")
     digest(lock["corpus"]["sha256"],64,"corpus SHA-256")
     if not isinstance(lock["files"],list) or len(lock["files"])!=4:raise ValueError("Model, driver, independent origin and exact diagnostics are required")

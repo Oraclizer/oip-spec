@@ -6,13 +6,13 @@ use super::*;
 use crate::authority::CommitRef;
 use crate::authority::identity::{ActionReply, Receipt};
 use crate::authority::reads::{CurrentRead, Value};
-use crate::authority::recovery::HeadError;
 use crate::authority::recovery::wire::ed25519::source::{
     CommitmentAuthorities, SignedCommitment, SourceAuthority, SourceJournal, SourceReader,
     SourceSigner,
 };
+use crate::authority::recovery::{HeadError, exact_image};
 use crate::authority::sync::Outcome;
-use crate::wire::admission::Arrival;
+use crate::wire::admission::{Arrival, TransportKey};
 use crate::wire::operands::SyncMode;
 use crate::wire::source_attestation::{self, SourceStatement};
 use serde_json::json;
@@ -470,6 +470,83 @@ fn sync_product_live_selected_source_and_receiver_recover_independently() {
         "sync-live\treopen-exact-retry-and-receipt\t29\t1\t{:x}",
         Sha256::digest(head.digest)
     );
+
+    let selected = service.anchor.current().unwrap().unwrap();
+    let record = exact_image(&mut service.file, selected).unwrap();
+    let bindings = &record.image.authority.wire_bindings;
+    let original_key = TransportKey::for_core(original.core()).unwrap();
+    assert_eq!(
+        bindings.get(&original_key).map(Vec::as_slice),
+        Some(original.core_bytes())
+    );
+
+    let mut changed = original.core().clone();
+    let Some(Body::StateSync(operation)) = &mut changed.body else {
+        panic!("expected synchronization original");
+    };
+    operation.words[0] ^= 1;
+    assert_eq!(TransportKey::for_core(&changed).unwrap(), original_key);
+    assert_ne!(encode_core(&changed).unwrap(), original.core_bytes());
+
+    let mut missing = original.core().clone();
+    missing.uuid.as_mut().unwrap()[0] = 254;
+    let missing_key = TransportKey::for_core(&missing).unwrap();
+    assert_ne!(missing_key, original_key);
+    assert!(!bindings.contains_key(&missing_key));
+
+    let journal_length = service.file.metadata().unwrap().len();
+    for (case, label, embedded, expected) in [
+        (
+            "receipt-original-uuid-conflict",
+            57,
+            changed,
+            WireError::ReplayConflict,
+        ),
+        (
+            "receipt-original-uuid-missing",
+            58,
+            missing,
+            WireError::RequestUnresolved,
+        ),
+    ] {
+        let receipt_core = core_with(
+            4,
+            8,
+            0,
+            label,
+            vec![STREAM_SESSION],
+            vec![encode_core(&embedded).unwrap()],
+        );
+        assert!(!bindings.contains_key(&TransportKey::for_core(&receipt_core).unwrap()));
+        let receipt = signed_at(receipt_core, 7, 100, 240);
+        trace.input(&mut service, case, &receipt, &client);
+        let actual = service
+            .receive_wire(
+                &inbound,
+                Entry::Normal,
+                &receipt,
+                &credentials(&client, &receipt),
+                DeliveryWindow::default(),
+            )
+            .unwrap_err();
+        assert_eq!(actual, expected);
+        assert_eq!(service.anchor.current().unwrap(), Some(selected));
+        assert_eq!(service.file.metadata().unwrap().len(), journal_length);
+        let code = match actual {
+            WireError::ReplayConflict => ResponseCode::ReplayConflict as u64,
+            WireError::RequestUnresolved => ResponseCode::Unresolved as u64,
+            other => panic!("unexpected receipt error {other:?}"),
+        };
+        trace.observed(
+            &mut service,
+            case,
+            json!({"wire_error": format!("{actual:?}"), "code": code}),
+        );
+        println!(
+            "sync-live\t{case}\t{code}\t{}",
+            trace::hex(&selected.digest)
+        );
+    }
 
     let rotated = SourceStatement {
         origin_epoch: 7,

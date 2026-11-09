@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import re
 
-IDENTITY=["1","intinf-response-full-v1","wire-response-sender-client-v1",
+IDENTITY=["1","intinf-response-full-v2","wire-response-sender-client-v2",
           "OIP_Wire_Response_Boundary.code_response_egress_flat_oracle","HOL-Library.Code_Target_Nat"]
 COMMON_KEYS={"id","mode","reply_values","retained_present","retained_values","raw_original_packet_hex","config",
              "policy_binding_hex","parameters_clock","signing_clock","frame_limit","channel"}
@@ -66,6 +66,10 @@ def sender_input(row,kind):
     if mode not in {0,1,2,3} or mode!=0 and present or not present and retained:raise MetadataError("Malformed typed boundary input")
     if mode==3 and (kind!="full" or reply or present or retained):raise MetadataError("Absent result is full-preflight-only; no dummy Outcome")
     config=row["config"];channel=row["channel"]
+    sync=config.get("sync",{"accept_sync":False,"accept_current":False})
+    if type(sync) is not dict:raise MetadataError("Bad synchronization configuration getter")
+    sync_flags=[sync.get(key) for key in ("accept_sync","accept_current")]
+    if any(type(flag) is not bool for flag in sync_flags):raise MetadataError("Bad synchronization acceptance getter")
     peers=config["peers"]
     if type(peers) is not dict:raise MetadataError("Source peers must remain principal-keyed")
     peer_values=[peers[key] for key in sorted(peers,key=lambda value:int(value))]
@@ -87,7 +91,7 @@ def sender_input(row,kind):
         [u64(channel[key]) for key in ["version","deployment","local","remote","expires"]],
         integers(channel["families"]),integers(channel["atomicities"]),integers(channel["schemes"]),
         octets(channel["local_public_key_hex"],32),octets(channel["remote_public_key_hex"],32),
-        [u64(config["profile"]["deployment"]),u64(config["local_principal"]),u64(config["local_key_id"]),u64(config["authority_epoch"]),u64(config["route_scope"]),u64(config["response_ttl_seconds"]),u64(config["max_nesting"])],
+        [u64(config["profile"]["deployment"]),u64(config["local_principal"]),u64(config["local_key_id"]),u64(config["authority_epoch"]),u64(config["route_scope"]),u64(config["response_ttl_seconds"]),u64(config["max_nesting"]),*map(int,sync_flags)],
         endpoints,domains,byte_list(config["response_key"],32),octets(row["policy_binding_hex"],32),site_row,
         clock(row["parameters_clock"])+clock(row["signing_clock"]),[u64(row["frame_limit"])],*peer_keys]
     return {"context":context,"mode":mode,"reply":reply,"retained_present":present,"retained":retained,
