@@ -15,7 +15,7 @@ use crate::wire::codec::{
 };
 use crate::wire::generated::{Core, Operation, Packet, core::Body};
 use crate::wire::negotiation::{Channel, verify};
-use crate::wire::operands::{Operands, decode};
+use crate::wire::operands::{Operands, decode, decode_before_response_status};
 use sha2::{Digest, Sha256};
 
 const BAD: WireError = WireError::InvalidFormat;
@@ -141,15 +141,24 @@ impl ResponseCode {
         }
     }
 
+    pub(crate) fn sync_only_descriptor(number: u64) -> Option<(u64, bool)> {
+        Self::from_number(number)
+            .filter(|code| code.is_sync_only())
+            .map(Self::descriptor)
+    }
+
+    fn is_sync_only(self) -> bool {
+        matches!(
+            self,
+            Self::StateCommitmentSynced
+                | Self::StateCommitmentMismatch
+                | Self::StateCommitmentStale
+                | Self::SourceAttestationRejected
+        )
+    }
+
     fn matches_sync_commitment(self) -> bool {
-        self.is_common()
-            || matches!(
-                self,
-                Self::StateCommitmentSynced
-                    | Self::StateCommitmentMismatch
-                    | Self::StateCommitmentStale
-                    | Self::SourceAttestationRejected
-            )
+        self.is_common() || self.is_sync_only()
     }
 
     fn is_common(self) -> bool {
@@ -434,7 +443,7 @@ fn validate_response(
         code,
         commit,
         original,
-    } = decode(response.core(), max_nesting)?
+    } = decode_before_response_status(response.core(), max_nesting)?
     else {
         return Err(BAD);
     };

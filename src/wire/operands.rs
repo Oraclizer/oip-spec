@@ -2,9 +2,10 @@
 //! canonical operation and never from a second request.
 
 use super::codec::{Result, Unsigned256, WireError, body, decode_core};
-use super::generated::{Core, Operation, operation::AppealDeadline};
+use super::generated::{Core, Operation, core::Body, operation::AppealDeadline};
 use super::negotiation::Offer;
 use crate::authority::identity::Handover;
+use crate::authority::recovery::wire::response::ResponseCode;
 use crate::authority::regulation::{
     Action as LegalAction, EnforcementOrder, LegalStage, Order, SpendKind, SpendScope,
 };
@@ -585,7 +586,12 @@ pub(crate) fn same_original(core: &Core, original: &Core) -> bool {
         && original.version == Some(6)
 }
 
-fn ack(core: &Core, op: &Operation, depth: usize) -> Result<Operands> {
+fn ack(
+    core: &Core,
+    op: &Operation,
+    depth: usize,
+    check_sync_response_codes: bool,
+) -> Result<Operands> {
     if op.appeal_deadline.is_some() {
         return Err(BAD);
     }
@@ -610,7 +616,16 @@ fn ack(core: &Core, op: &Operation, depth: usize) -> Result<Operands> {
             None
         };
         words.end()?;
-        if !(1..=3).contains(&kind) || (kind != 1 && commit.is_some()) {
+        let sync_descriptor = if check_sync_response_codes {
+            ResponseCode::sync_only_descriptor(code)
+        } else {
+            None
+        };
+        let committed = commit.is_some();
+        if !(1..=3).contains(&kind)
+            || (kind != 1 && committed)
+            || sync_descriptor.is_some_and(|descriptor| descriptor != (kind, committed))
+        {
             return Err(BAD);
         }
         if nested.version != core.version
@@ -623,6 +638,8 @@ fn ack(core: &Core, op: &Operation, depth: usize) -> Result<Operands> {
         }
         let matches_debit_revision =
             |revision| commit.is_none_or(|reference| reference.position == revision);
+        let mut sync_call =
+            matches!(&nested.body, Some(Body::StateSync(op)) if op.opcode == Some(7));
         match decoded {
             Operands::Ordinary { id: nested, payload, .. } => {
                 if nested != id || (matches!(payload.command, Command::Debit { .. })
@@ -648,9 +665,13 @@ fn ack(core: &Core, op: &Operation, depth: usize) -> Result<Operands> {
                 {
                     return Err(BAD);
                 }
+                sync_call = family == 1 && operation.opcode == Some(7);
             }
             Operands::Response { .. } => return Err(BAD),
             _ => (),
+        }
+        if sync_descriptor.is_some() && !sync_call {
+            return Err(BAD);
         }
         return Ok(Operands::Response {
             id,
@@ -791,6 +812,20 @@ fn governance(core: &Core, op: &Operation) -> Result<Operands> {
 }
 
 pub fn decode(core: &Core, max_nesting: usize) -> Result<Operands> {
+    decode_with_response_checks(core, max_nesting, true)
+}
+
+/// Decode the response structure and correlation fields before the signed
+/// verifier compares the retained original and checks the response status.
+pub(crate) fn decode_before_response_status(core: &Core, max_nesting: usize) -> Result<Operands> {
+    decode_with_response_checks(core, max_nesting, false)
+}
+
+fn decode_with_response_checks(
+    core: &Core,
+    max_nesting: usize,
+    check_sync_response_codes: bool,
+) -> Result<Operands> {
     if max_nesting == 0 {
         return Err(BAD);
     }
@@ -800,7 +835,7 @@ pub fn decode(core: &Core, max_nesting: usize) -> Result<Operands> {
         (1 | 3, _) => ordinary(core, family, op),
         (2, _) => legal(core, op),
         (4, _) => read(op, max_nesting),
-        (5, _) => ack(core, op, max_nesting),
+        (5, _) => ack(core, op, max_nesting, check_sync_response_codes),
         (6, _) => heartbeat(core, op),
         (7, _) => governance(core, op),
         _ => Err(BAD),

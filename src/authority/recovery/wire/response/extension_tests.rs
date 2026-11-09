@@ -192,9 +192,48 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
 
         let packet = decode_packet(&response, boundary.max_frame).unwrap();
         let raw = decode(packet.core(), boundary.max_nesting);
+        let sync_code = matches!(words[3], 29 | 39 | 40 | 41);
+        let raw_compatible = if sync_code {
+            compatible
+        } else {
+            structurally_valid && (words[2] == 1 || words[4] == 0)
+        };
+        if decoded.is_some() && raw_compatible {
+            assert!(matches!(&raw, Ok(Operands::Response { .. })), "{id}");
+        } else {
+            assert!(matches!(&raw, Err(WireError::InvalidFormat)), "{id}");
+        }
         let accepted = if let Ok(expected) = expected {
             let result = admit_response(&channel, &boundary, &expected, &response);
             assert_eq!(result.is_ok(), compatible, "{id}: {result:?}");
+            if sync_code
+                && (family, opcode) == (1, 1)
+                && structurally_valid
+                && (words[2] == 1 || words[4] == 0)
+            {
+                let mut different = expected.core().clone();
+                different.uuid.as_mut().unwrap()[0] ^= 1;
+                let different = signed(different);
+                let different = decode_packet(&different, boundary.max_frame).unwrap();
+                assert_ne!(different.core_bytes(), expected.core_bytes(), "{id}");
+                assert_eq!(
+                    caller_id(&decode(different.core(), 1).unwrap()),
+                    Ok(CallId {
+                        namespace: words[0],
+                        sequence: words[1],
+                    }),
+                    "{id}"
+                );
+                let mismatch = admit_response(&channel, &boundary, &different, &response);
+                println!(
+                    "response-code-precedence\t{id}\t{:?}\t{:?}\t{:?}\t{:x}",
+                    raw.as_ref().unwrap_err(),
+                    result.as_ref().unwrap_err(),
+                    mismatch.as_ref().unwrap_err(),
+                    Sha256::digest(different.core_bytes()),
+                );
+                assert_eq!(mismatch, Err(WireError::ReplayConflict), "{id}");
+            }
             if let Ok(result) = result {
                 assert_eq!(
                     result.id,
@@ -217,7 +256,6 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
         } else {
             assert_eq!((family, opcode), (1, 7), "{id}");
             assert_eq!(expected.err(), Some(BAD), "{id}");
-            assert!(matches!(raw, Err(WireError::InvalidFormat)), "{id}");
             false
         };
         println!(
