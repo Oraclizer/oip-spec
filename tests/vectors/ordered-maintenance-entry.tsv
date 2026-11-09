@@ -1,0 +1,6 @@
+attached_ordered	configured_ordered	local_actor_present	open
+false	false	true	true
+true	false	true	false
+false	true	true	false
+true	true	true	false
+false	false	false	false

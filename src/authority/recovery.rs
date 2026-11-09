@@ -955,6 +955,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
             .map_err(RecoveryError::Endpoint)
     }
 
+    // Native client operations and generic maintenance require an unordered profile.
     fn require_native_client(&self) -> Result<(), RecoveryError> {
         if self.anchor.ordered_wire_control().is_some()
             || self.security.ordered_revocation_profile().is_some()
@@ -971,6 +972,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         previous: Consent<'_, S>,
         successor: Consent<'_, S>,
     ) -> Result<bool, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -986,6 +988,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         contexts: Vec<EndpointContext>,
         sessions: BTreeMap<SessionId, SessionBinding>,
     ) -> Result<bool, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -1002,6 +1005,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         now: u64,
         signature: &S::Signature,
     ) -> Result<bool, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -1015,6 +1019,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         maintenance: &S::MaintenanceToken,
         origin: OriginKey,
     ) -> Result<Option<SettlementKey>, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -1028,6 +1033,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         maintenance: &S::MaintenanceToken,
         key: SettlementKey,
     ) -> Result<Option<SecondaryJob>, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -1041,6 +1047,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         maintenance: &S::MaintenanceToken,
         key: SettlementKey,
     ) -> Result<bool, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)
@@ -1055,6 +1062,7 @@ impl<S: Security, H: AuthenticatedHead> PersistentAuthority<S, H> {
         ack: Acknowledgement,
         signature: &S::Signature,
     ) -> Result<bool, RecoveryError> {
+        self.require_native_client()?;
         self.transact(|product| {
             product
                 .maintenance(maintenance)

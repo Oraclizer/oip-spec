@@ -24,6 +24,10 @@ The authority retains a bounded set of exact preparations for one witness revisi
 
 Provisioning starts from two pre-provisioned empty control keys. It archives a validated product genesis and selects it through a separate exact signed provisioning authorization. Repair uses a separate signed cut for the prospective authority configuration, destination, new writer and selected archive and nonce. A resumed repair MAY verify and reuse the exact existing destination for the same authorization. A changed path or writer MUST consume the current nonce and can never overwrite an existing file. The independent profile uses signed ordered publication. Trusted maintenance actions require their own explicit authority entry.
 
+The reference authority with ordered control MUST execute maintenance through the authenticated, purpose-specific ordered maintenance entry. That entry checks the current policy and revocation state and consumes the selected control cut when publishing the maintenance result. A generic maintenance method that does not carry this ordered authorization MUST reject an invocation on an ordered authority before opening a mutable operation or exposing resulting work. A standalone profile without ordered control continues to apply its configured local maintenance authorization.
+
+The selected cut determines the currently valid maintainer and the exact permitted intent. A change to that cut invalidates the proposed publication. A rejected maintenance request MUST leave the authority record, queue and externally visible maintenance results unchanged.
+
 ## Fresh endpoint and retained results
 
 - Reopen MUST reconstruct a fresh endpoint from the exact anchored record and current authenticated authority attachments. Recompute the digest and check the deployment, profile, sequence and exact head before serving. An old valid record, an unanchored record, or an absent or mismatched authenticated record cannot authorize a new endpoint.
