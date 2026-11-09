@@ -5,7 +5,7 @@ Changes that matter to implementers are recorded here in the format of
 specification versions. The Rust crate and the Go module are not published
 as packages.
 
-## [0.6.0] - Unreleased
+## [0.6.0] - 2026-11-09
 
 Version 0.6.0 defines a signed protobuf message (wire version 6), the checks
 a receiver applies before any effect, and the recorded outcome of each
