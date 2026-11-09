@@ -5,6 +5,18 @@ Changes that matter to implementers are recorded here in the format of
 specification versions. The Rust crate and the Go module are not published
 as packages.
 
+## [Unreleased]
+
+### Added
+
+- Version 6 operation extension and response allocation rules.
+- `SyncCommitment` and `CurrentCommitment`, with binary source attestations, current roster verification and independent source record selection.
+- Reference admission and execution for the existing `Write` operation and DATA_UPDATED result.
+
+### Fixed
+
+- Generic mutable entry points now enforce the selected ordered maintenance boundary.
+
 ## [0.6.0] - 2026-11-09
 
 Version 0.6.0 defines a signed protobuf message (wire version 6), the checks

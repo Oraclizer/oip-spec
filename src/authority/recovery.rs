@@ -416,6 +416,7 @@ fn validate_retained_transition(record: &CommitRecord, previous: Option<&CommitR
     if !state.primary.ledger.has_consistent_endpoint_registry()
         || !state.primary.owners.keys().eq(state.primary.ledger.registered_assets())
         || !state.primary.has_consistent_settlement_receipts()
+        || !super::sync::State::valid_image(state, record.profile.deployment)
         || !state.read_history.has_consistent_asset_registry(&state.primary.ledger)
         || !state.read_history.matches_current(&state.primary)
         || !state.secondary.is_bound_to_primary(&state.primary)

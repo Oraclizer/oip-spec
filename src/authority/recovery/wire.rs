@@ -8,9 +8,10 @@ use crate::authority::identity::{
     Action, ActionReply, Consent, Credentials, Entry, Identity, Observation, Operation,
     ProductAuthority, ReadRequest, Receipt, Request, Scope, Security, SessionProof,
 };
+use crate::authority::sync::{self, Stream};
 use crate::lock_finality::{Account, Command, Reply};
 use crate::wire::admission::{Arrival, Boundary, TransportKey, admit_packet, compare_binding, wire_expiry};
-use crate::wire::codec::{CanonicalPacket, WireError, check_declared_version, decode_packet};
+use crate::wire::codec::{CanonicalPacket, WireError, check_declared_version, decode_packet, encode_core};
 use crate::wire::generated::Core;
 use crate::wire::legacy::{self, ValidatedLegacy};
 use crate::wire::negotiation::{Channel, Offer};
@@ -223,6 +224,8 @@ fn source_session(operands: &Operands) -> Option<u64> {
         Operands::Spend { payload, .. } => Some(payload.session),
         Operands::Read(read) => Some(read.session()),
         Operands::Receipt { session, .. }
+        | Operands::SyncCommitment { session, .. }
+        | Operands::CurrentCommitment { session, .. }
         | Operands::Handover { session, .. }
         | Operands::Install { session, .. } => Some(*session),
         _ => None,
@@ -294,6 +297,16 @@ fn read_at(read: ReadOperand, epoch: u64) -> ReadRequest {
     }
 }
 
+fn commitment_read_at(operands: &Operands, authority_epoch: u64) -> Option<ReadRequest> {
+    let Operands::CurrentCommitment { revision, asset, origin_domain, .. } = *operands else {
+        return None;
+    };
+    Some(ReadRequest::Current {
+        query: Query::Commitment(Stream { asset, origin_domain }),
+        expected: CommitCut { authority_epoch, revision },
+    })
+}
+
 fn request_at(target: u64, operands: &Operands) -> Option<Request<'_>> {
     match operands {
         Operands::Ordinary { id, payload, .. } => Some(Request {
@@ -336,10 +349,23 @@ fn request_at(target: u64, operands: &Operands) -> Option<Request<'_>> {
     }
 }
 
+fn signed_request_at<'a>(core: &Core, operands: &'a Operands, exact: &'a [u8]) -> Option<Request<'a>> {
+    if let Some(call) = sync::Call::from_operand(core, operands, exact) {
+        return Some(Request {
+            target: call.target,
+            id: call.id,
+            expected: call.cut,
+            action: Action::SyncCommitment(call),
+        });
+    }
+    request_at(core.target_domain?, operands)
+}
+
 fn run_operand<S: WireSecurity>(
     product: &mut ProductAuthority<S>,
     core: &Core,
     operands: &Operands,
+    request: Option<Request<'_>>,
     entry: Entry,
     credentials: &WireCredentials<'_, S>,
     max_nesting: usize,
@@ -353,7 +379,7 @@ fn run_operand<S: WireSecurity>(
         signature: credentials.signature,
         proof: SessionProof { session, epoch },
     };
-    if let Some(request) = request_at(target, operands) {
+    if let Some(request) = request {
         let auth = auth(source_session(operands).expect("typed call carries a session"));
         // The caller cannot substitute a Request: this is the sole
         // materialization of the independently decoded canonical operand.
@@ -371,6 +397,13 @@ fn run_operand<S: WireSecurity>(
             .map_err(|_| WireError::ProductRejected);
     }
     match operands {
+        Operands::CurrentCommitment { session, .. } => {
+            let request = commitment_read_at(operands, epoch).ok_or(WireError::InvalidFormat)?;
+            product
+                .read(entry, &auth(*session), target, request, None)
+                .map(WireReply::Observation)
+                .map_err(|_| WireError::ProductRejected)
+        }
         Operands::Read(read) => {
             let request = read_at(*read, epoch);
             product
@@ -386,7 +419,9 @@ fn run_operand<S: WireSecurity>(
                 original,
                 max_nesting.checked_sub(1).ok_or(WireError::InvalidFormat)?,
             )?;
-            let request = request_at(target, &decoded).ok_or(WireError::InvalidFormat)?;
+            let exact = encode_core(original)?;
+            let request = signed_request_at(original, &decoded, &exact)
+                .ok_or(WireError::InvalidFormat)?;
             if ordered && matches!(
                 request.action,
                 Action::Ordinary(payload) if matches!(payload.command, Command::Debit { .. })
@@ -395,9 +430,10 @@ fn run_operand<S: WireSecurity>(
                 // resolve_wire_debit for the exact ordered Debit receipt.
                 return Err(WireError::ProductRejected);
             }
-            if ordered {
+            if ordered || matches!(request.action,
+                Action::Ordinary(payload) if matches!(payload.command, Command::Write { .. }))
+            {
                 let key = TransportKey::for_core(original)?;
-                let exact = crate::wire::codec::encode_core(original)?;
                 if compare_binding(product.reads.authority.state.wire_bindings.get(&key), &exact)?
                     != Arrival::Identical
                 {
@@ -565,6 +601,7 @@ struct CheckedInput {
     handover_maintainer: Option<crate::Principal>,
     recovery_endorser: Option<(Identity, SessionProof)>,
     debit_scope: Option<(Scope, Operation, bool)>,
+    commitment_scope: Option<(Scope, Operation, bool)>,
 }
 fn gate_delivery(delivery: DeliveryWindow, now: u64, strict: bool) -> Result<(), WireError> {
     if delivery.cancelled {
@@ -681,7 +718,16 @@ fn consume<S: WireSecurity>(
     // A retained exact native call is still subject to the current identity
     // and receipt policy. Fresh evidence is consumed only for a new result.
     let primary = &product.reads.authority.state.primary;
-    let request = request_at(boundary.target, &operands);
+    let request = signed_request_at(core, &operands, exact);
+    if arrival == Arrival::First
+        && request.is_some_and(|request| {
+            matches!(request.action,
+                Action::Ordinary(payload) if matches!(payload.command, Command::Write { .. }))
+                && primary.claimed(request.id)
+        })
+    {
+        return Err(WireError::ReplayConflict);
+    }
     if request.is_some() && product.security.requires_clock_observation()
         && primary.ledger.clock() == 0
     {
@@ -689,7 +735,7 @@ fn consume<S: WireSecurity>(
     }
     let retained = arrival == Arrival::Identical
         && request.as_ref().is_some_and(|request| {
-            primary.calls.contains_key(&request.id) || primary.regulation.claimed(request.id)
+            primary.claimed(request.id)
         });
     if has_proof(&operands) && !retained && !product.security.verify_operand_proof(core, &operands)
     {
@@ -721,7 +767,7 @@ fn consume<S: WireSecurity>(
             let disposition = observed.check_debit(&original)?;
             debit_scope = Some((Scope::Asset(payload.binding.asset), Operation::Execute, retained));
             if !retained {
-                if primary.calls.contains_key(&request.id) || primary.regulation.claimed(request.id) {
+                if primary.claimed(request.id) {
                     return Err(WireError::ReplayConflict);
                 }
                 debit_attempt = Some((original, disposition));
@@ -734,12 +780,32 @@ fn consume<S: WireSecurity>(
         product,
         core,
         &operands,
+        request,
         entry,
         credentials,
         current.max_nesting,
         ordered.is_some(),
     )?;
     #[cfg(test)] response::source_trace::product_return(&reply);
+    let commitment_scope = match &operands {
+        Operands::SyncCommitment { asset, .. } => {
+            Some((Scope::Asset(*asset), Operation::Execute, retained))
+        }
+        Operands::CurrentCommitment { .. } => {
+            let read = commitment_read_at(&operands, current.epoch).ok_or(WireError::InvalidFormat)?;
+            Some((Scope::Read(read), Operation::Current, false))
+        }
+        Operands::Receipt { original, .. }
+            if matches!(&original.body,
+                Some(crate::wire::generated::core::Body::StateSync(op)) if op.opcode == Some(7)) =>
+        {
+            let Operands::SyncCommitment { asset, .. } = decode(original, 1)? else {
+                return Err(WireError::InvalidFormat);
+            };
+            Some((Scope::Asset(asset), Operation::Receipt, false))
+        }
+        _ => None,
+    };
     let ordered = match (ordered, observed) {
         (Some(ordered), Some(mut observed)) => {
             let debit = if let Some((original, disposition)) = debit_attempt {
@@ -787,7 +853,7 @@ fn consume<S: WireSecurity>(
             core: core.clone(), cut, transport: key,
             signed_core_sha256: Sha256::digest(exact).into(),
             ordered, admitted_at: current.now, identity, session, ack_maintainer,
-            handover_maintainer, recovery_endorser, debit_scope,
+            handover_maintainer, recovery_endorser, debit_scope, commitment_scope,
         },
         receipt,
     ))
@@ -804,12 +870,12 @@ fn publication_guard<S: WireSecurity>(
 ) -> Result<PublicationGuard, WireError> {
     let CheckedInput { core, cut, transport, signed_core_sha256, ordered,
         admitted_at, identity, session, ack_maintainer, handover_maintainer,
-        recovery_endorser, debit_scope } = check;
+        recovery_endorser, debit_scope, commitment_scope } = check;
     let mut boundary = boundary_at(
         security, channel, &core, deployment, cut,
         ordered.as_ref().map(|_| admitted_at),
     )?;
-    if ordered.is_some() {
+    if ordered.is_some() || commitment_scope.is_some() {
         let current_identity = match session {
             Some(proof) => security.authenticate_session(credentials.token, proof),
             None => security.authenticate(credentials.token),
@@ -817,6 +883,15 @@ fn publication_guard<S: WireSecurity>(
         if current_identity != Some(identity) || !security.matches_signed_packet(bytes, credentials.signature) {
             return Err(WireError::InvalidSource);
         }
+    }
+    if let Some((scope, operation, receipt)) = commitment_scope {
+        let proof = session.ok_or(WireError::InvalidSource)?;
+        let permitted = |operation| security.permit_session(identity, proof, boundary.target, operation, scope);
+        if !permitted(operation) || (receipt && !permitted(Operation::Receipt)) {
+            return Err(WireError::ProductRejected);
+        }
+    }
+    if ordered.is_some() {
         if let Some((scope, operation, receipt)) = debit_scope {
             let permitted = |operation| security.permit(
                 identity, boundary.target, operation, scope, cut.authority_epoch,

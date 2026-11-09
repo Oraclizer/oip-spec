@@ -30,6 +30,8 @@ type Operands struct {
 	TypedIR []uint64
 	Family, Opcode, Session uint64
 	Native                  *Native
+	Sync                    *SyncCommitment
+	CommitmentQuery         *CurrentCommitment
 	Words                   []uint64
 	Blobs                   [][]byte
 	Original                *wirepb.Core
@@ -114,7 +116,7 @@ func decodeRead(op *wirepb.Operation, depth int, epoch uint64, summary *[]uint64
         if w.end()!=nil || len(op.Blobs)!=1 || depth<=1 {return 0,nil,ErrFormat}
         original,err:=DecodeCore(op.Blobs[0]);if err!=nil {return 0,nil,err}
         typed,err:=DecodeOperands(original,depth-1);if err!=nil {return 0,nil,err}
-        if typed.Native==nil {return 0,nil,ErrFormat}
+        if typed.Native==nil && typed.Sync==nil {return 0,nil,ErrFormat}
         canonical,err:=EncodeCore(original);if err!=nil {return 0,nil,err}
         *summary=valueNode(15,valueScalar(session),valueBytes(canonical),typed.TypedIR)
         return session,original,nil
@@ -311,6 +313,31 @@ func responseStatus(kind, code uint64, committed bool) (syncOnly bool, err error
 	return false, nil
 }
 
+// syncResponseStatus checks the existing code assignments that can apply to
+// a synchronization call. The other recorded assignments belong to earlier
+// calls. An unknown code keeps its raw value and the kind's commit rules.
+func syncResponseStatus(kind, code uint64, committed bool) error {
+	switch {
+	case code >= 1 && code <= 3:
+		if kind == 1 && !committed {
+			return nil
+		}
+	case code == 4 || (code >= 10 && code <= 28) || (code >= 30 && code <= 38):
+		return ErrFormat
+	case code >= 50 && code <= 56:
+		if kind == 2 {
+			return nil
+		}
+	case code >= 70 && code <= 77:
+		if kind == 3 {
+			return nil
+		}
+	default:
+		return nil
+	}
+	return ErrFormat
+}
+
 func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uint64) (*wirepb.Core, error) {
 	if len(op.Blobs) != 1 {
 		return nil, ErrFormat
@@ -364,6 +391,10 @@ func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uin
 		if nested.Native.Sequence != sequence || !debitAt(nested.Family, nested.Opcode, nested.Native.Revision) {
 			return nil, ErrFormat
 		}
+	case nested.Sync != nil:
+		if nested.Sync.Sequence != sequence {
+			return nil, ErrFormat
+		}
 	case nested.Family == 4 && nested.Opcode == 8:
 		// A receipt request answers for the original call that it carries.
 		inner := nested.Original
@@ -371,20 +402,21 @@ func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uin
 			return nil, ErrSource
 		}
 		family, innerOp := Body(inner)
-		if innerOp == nil {
-			return nil, ErrFormat
-		}
-		call, _, err := native(inner,innerOp)
-		if err != nil {
-			return nil, err
-		}
-		if inner.GetPrincipal() != namespace || call.Sequence != sequence ||
-			!debitAt(family, innerOp.GetOpcode(), call.Revision) {
+		// Receipt decoding already validated the original as a call. All
+		// receiptable calls use word 2 for sequence and word 4 for revision.
+		if inner.GetPrincipal() != namespace || innerOp.Words[1] != sequence ||
+			!debitAt(family, innerOp.GetOpcode(), innerOp.Words[3]) {
 			return nil, ErrFormat
 		}
 		callFamily, callOpcode = family, innerOp.GetOpcode()
+	case nested.CommitmentQuery != nil:
+		return nil, ErrFormat
 	}
-	if syncOnly && (callFamily != 1 || callOpcode != 7) {
+	if callFamily == 1 && callOpcode == 7 {
+		if err := syncResponseStatus(kind, code, committed); err != nil {
+			return nil, err
+		}
+	} else if syncOnly {
 		return nil, ErrFormat
 	}
 	canonical,err:=EncodeCore(original);if err!=nil {return nil,err}
@@ -565,12 +597,22 @@ func DecodeOperands(core *wirepb.Core, maxNesting int) (Operands, error) {
 	}
 	var err error
 	switch {
+	case family == 1 && opcode == 7:
+		typed.Sync, typed.TypedIR, err = decodeSyncCommitment(core, op)
+		if typed.Sync != nil {
+			typed.Session = typed.Sync.Session
+		}
 	case (family == 1 && opcode == 6) || (family == 2 && opcode == 3):
 		typed.Native, err = spend(core, family, op)
 	case family == 1 || family == 3:
 		typed.Native, err = ordinary(core, family, op)
 	case family == 2:
 		typed.Native, err = legal(core, op)
+	case family == 4 && opcode == 9:
+		typed.CommitmentQuery, typed.TypedIR, err = decodeCurrentCommitment(core, op)
+		if typed.CommitmentQuery != nil {
+			typed.Session = typed.CommitmentQuery.Session
+		}
 	case family == 4:
 		typed.Session, typed.Original, err = decodeRead(op,maxNesting,core.GetAuthorityEpoch(),&typed.TypedIR)
 	case family == 5:
@@ -593,19 +635,21 @@ func DecodeOperands(core *wirepb.Core, maxNesting int) (Operands, error) {
 }
 
 // ReferenceAccepts reports whether the reference configuration executes the
-// operation of a decoded Core. It accepts 25 of the 31 operations of version
-// 6 and refuses Write, Timeout, CorrelatedResponse, Capabilities, Liveness
+// operation of a decoded Core. The v0.6.1 configuration accepts 28 of the 33
+// operations and refuses Timeout, CorrelatedResponse, Capabilities, Liveness
 // and InstallEpoch.
 func ReferenceAccepts(core *wirepb.Core) bool {
 	family, op := Body(core)
 	opcode := op.GetOpcode()
 	switch family {
-	case 1, 3:
-		return opcode >= 1 && opcode <= 6
+	case 1:
+		return opcode >= 1 && opcode <= 7
+	case 3:
+		return opcode >= 1 && opcode <= 7
 	case 2:
 		return opcode >= 1 && opcode <= 3
 	case 4:
-		return opcode >= 1 && opcode <= 8
+		return opcode >= 1 && opcode <= 9
 	case 5, 7:
 		return opcode == 1
 	default:

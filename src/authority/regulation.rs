@@ -782,6 +782,7 @@ impl ReadAuthority {
         }
         if current.regulation.spend_receipts.contains_key(&call.id)
             || current.calls.contains_key(&call.id)
+            || current.sync.claimed(call.id)
         {
             return LegalReply::Refused(Refusal::ConflictingOrder);
         }
@@ -839,6 +840,7 @@ impl ReadAuthority {
         }
         if current.regulation.legal_receipts.contains_key(&call.id)
             || current.calls.contains_key(&call.id)
+            || current.sync.claimed(call.id)
         {
             return SpendReply::Rejected;
         }

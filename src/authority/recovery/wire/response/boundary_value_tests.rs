@@ -26,11 +26,21 @@ fn refusal(value:Refusal)->u64 {match value {Refusal::InvalidAuthority=>0,Refusa
 fn legal(value:LegalReply)->Vec<u64> {match value {LegalReply::Emitted(c)=>vec![0,c.position as u64],LegalReply::Applied(c)=>vec![1,c.position as u64],LegalReply::Refused(r)=>vec![2,refusal(r)]}}
 fn spend(value:SpendReply)->Vec<u64> {match value {SpendReply::Executed{root,commit}=>vec![0,root.domain,root.event,commit.position as u64],
     SpendReply::Rejected=>vec![1],SpendReply::Busy=>vec![2],SpendReply::Unavailable=>vec![3]}}
-pub(in crate::authority::recovery::wire::response) fn receipt(value:Receipt)->Vec<u64> {match value {Receipt::Ordinary(value)=>cat(&[0],collection(value)),Receipt::Legal(value)=>cat(&[1],legal(value)),Receipt::Spend(value)=>cat(&[2],spend(value))}}
+fn sync_commitment(value: sync::Outcome) -> Vec<u64> {
+    match value {
+        sync::Outcome::Synced(c) => vec![0, c.position as u64],
+        sync::Outcome::Busy => vec![1],
+        sync::Outcome::Unavailable => vec![2],
+        sync::Outcome::Mismatch => vec![3],
+        sync::Outcome::Stale => vec![4],
+        sync::Outcome::SourceAttestationRejected => vec![5],
+    }
+}
+pub(in crate::authority::recovery::wire::response) fn receipt(value:Receipt)->Vec<u64> {match value {Receipt::Ordinary(value)=>cat(&[0],collection(value)),Receipt::Legal(value)=>cat(&[1],legal(value)),Receipt::Spend(value)=>cat(&[2],spend(value)),Receipt::SyncCommitment(value)=>cat(&[3],sync_commitment(value))}}
 pub(in crate::authority::recovery::wire::response) fn action(value:ActionReply)->Vec<u64> {match value {
     ActionReply::Ordinary(CheckedExecution::Forwarded(value))=>cat(&[0,0],collection(value)),
     ActionReply::Ordinary(CheckedExecution::Busy)=>vec![0,1],ActionReply::Ordinary(CheckedExecution::Unavailable)=>vec![0,2],
-    ActionReply::Ordinary(CheckedExecution::Rejected)=>vec![0,3],ActionReply::Legal(value)=>cat(&[1],legal(value)),ActionReply::Spend(value)=>cat(&[2],spend(value))}}
+    ActionReply::Ordinary(CheckedExecution::Rejected)=>vec![0,3],ActionReply::Legal(value)=>cat(&[1],legal(value)),ActionReply::Spend(value)=>cat(&[2],spend(value)),ActionReply::SyncCommitment(value)=>cat(&[3],sync_commitment(value))}}
 pub(in crate::authority::recovery::wire::response) fn error(value:&WireError)->Vec<u64> {vec![match value {
     WireError::InvalidFormat=>0,WireError::UnsupportedVersion=>1,WireError::InvalidSource=>2,WireError::InvalidSignature=>3,
     WireError::InvalidThresholdSignature=>4,WireError::TtlExpired=>5,WireError::TtlInvalid=>6,WireError::ReplayConflict=>7,

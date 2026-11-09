@@ -6,6 +6,7 @@ use crate::authority::identity::{ActionReply, EndpointError, Entry, Receipt};
 use crate::authority::reads::CheckedExecution;
 use crate::authority::recovery::{AuthenticatedHead, PersistentAuthority, RecoveryError};
 use crate::authority::regulation::{LegalReply, LegalStage, Refusal, SpendReply};
+use crate::authority::sync;
 use crate::authority::{Collection, CommitRef, Outcome, OutcomeReply};
 use crate::lock_finality::{Command, Reply, TerminalKind};
 use crate::wire::admission::{Boundary, admit_packet};
@@ -96,12 +97,10 @@ response_codes! {
 }
 
 impl ResponseCode {
-    fn matches_call(self, operands: &Operands, original: &Core) -> bool {
+    fn matches_call(self, operands: &Operands) -> bool {
         use ResponseCode::*;
-        if matches!(&original.body, Some(Body::StateSync(op)) if op.opcode == Some(7)) {
-            return self.matches_sync_commitment();
-        }
         match operands {
+            Operands::SyncCommitment { .. } => self.matches_sync_commitment(),
             Operands::Ordinary { payload, .. } => match self {
                 Reserved => matches!(payload.command, Command::Reserve { .. }),
                 SourceDispatched => matches!(payload.command, Command::Dispatch { .. }),
@@ -216,6 +215,11 @@ impl ResponseStatus {
         }
     }
 
+    pub(crate) fn compatible_with_sync(kind: u64, number: u64, commit: bool) -> bool {
+        Self::decode(kind, number, commit)
+            .is_ok_and(|status| status.known().is_none_or(ResponseCode::matches_sync_commitment))
+    }
+
     /// The code when this version defines it.
     pub fn known(self) -> Option<ResponseCode> {
         match self {
@@ -268,6 +272,8 @@ impl ResponseResult {
     fn from_received(received: Received, retained: Option<Receipt>) -> Self {
         use ResponseCode::*;
         match (received.reply, retained) {
+            (WireReply::Executed(ActionReply::SyncCommitment(reply)), Some(Receipt::SyncCommitment(stored)))
+                if reply == stored => Self::sync_commitment(stored),
             (
                 WireReply::Executed(ActionReply::Ordinary(CheckedExecution::Forwarded(
                     Collection::Collected(reply),
@@ -304,6 +310,7 @@ impl ResponseResult {
                 WireReply::Executed(
                     ActionReply::Legal(LegalReply::Emitted(_) | LegalReply::Applied(_))
                     | ActionReply::Spend(SpendReply::Executed { .. })
+                    | ActionReply::SyncCommitment(_)
                     | ActionReply::Ordinary(CheckedExecution::Forwarded(
                         Collection::Waiting | Collection::Collected(_),
                     )),
@@ -311,6 +318,18 @@ impl ResponseResult {
                 _,
             ) => Self::plain(Unresolved),
             _ => Self::plain(ProductRejected),
+        }
+    }
+
+    fn sync_commitment(outcome: sync::Outcome) -> Self {
+        use ResponseCode::*;
+        match outcome {
+            sync::Outcome::Synced(commit) => Self { code: StateCommitmentSynced, commit: Some(commit) },
+            sync::Outcome::Busy => Self::plain(Busy),
+            sync::Outcome::Unavailable => Self::plain(Unavailable),
+            sync::Outcome::Mismatch => Self::plain(StateCommitmentMismatch),
+            sync::Outcome::Stale => Self::plain(StateCommitmentStale),
+            sync::Outcome::SourceAttestationRejected => Self::plain(SourceAttestationRejected),
         }
     }
 
@@ -425,7 +444,8 @@ impl ResponseResult {
 
 fn caller_id(operands: &Operands) -> Result<CallId, WireError> {
     match operands {
-        Operands::Ordinary { id, .. } | Operands::Legal { id, .. } | Operands::Spend { id, .. } => {
+        Operands::Ordinary { id, .. } | Operands::Legal { id, .. } | Operands::Spend { id, .. }
+        | Operands::SyncCommitment { id, .. } => {
             Ok(*id)
         }
         _ => Err(BAD),
@@ -454,7 +474,7 @@ fn validate_response(
     let code = ResponseStatus::decode(kind, code, commit.is_some())?;
     if code
         .known()
-        .is_some_and(|code| !code.matches_call(&expected_operands, expected.core()))
+        .is_some_and(|code| !code.matches_call(&expected_operands))
     {
         return Err(BAD);
     }

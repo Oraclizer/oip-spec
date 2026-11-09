@@ -26,7 +26,8 @@ SEED = 0x6F69702D763036
 RUST_TEST = "wire::admission::operation_tests::operation_vectors_follow_the_real_transport_receiver"
 GO_TEST = "TestOperationVectorsFollowTheRealTransportReceiver"
 SIGNING_VECTORS = ROOT / "tests/vectors/reference-signing-inputs.json"
-COUNTS = [6, 3, 8, 8, 2, 2, 2]
+COUNTS = [7, 3, 8, 9, 2, 2, 2]
+ADDED_OPERATIONS = {(1, 7), (4, 9)}
 PROFILE = {"version": 6, "families": list(range(1, 8)), "atomicities": [1, 2, 3], "schemes": [1, 2]}
 BOUNDARY = {"deployment": 7, "source": 0, "target": 0, "principal": 7, "key_id": 9, "epoch": 9,
             "route_scope": 1, "now": 105, "asset_ttl_floor": 0, "future_skew": 0, "version_floor": 6,
@@ -39,7 +40,8 @@ VALUES = {"message_reference": 33, "call_sequence": 33, "session": 2, "revision"
           "jurisdiction": 1, "legal_basis": 1, "issuance_epoch": 9, "sender": 3, "spend_recipient": 4,
           "commit_position": 2, "target": 0, "caller_namespace": 7, "kind": 1, "code": 12,
           "position": 2, "challenge": 11, "expires": 200, "previous": 7, "successor": 8,
-          "old_session": 2, "new_session": 3, "next_epoch": 10, "domain": 0, "event": 17}
+          "old_session": 2, "new_session": 3, "next_epoch": 10, "domain": 0, "event": 17,
+          "source_position": 41}
 
 
 def dump(value):
@@ -75,7 +77,7 @@ def table():
     counts = [sum(o["family"] == family for o in operations) for family in range(1, 8)]
     if counts != COUNTS:
         raise SystemExit(f"operation family counts changed: {counts}")
-    if len(operations) != 31 or sum(o["reference_accepts"] for o in operations) != 25:
+    if len(operations) != 33 or sum(o["reference_accepts"] for o in operations) != 28:
         raise SystemExit("operation or reference-profile count changed")
     return data, operations
 
@@ -167,6 +169,12 @@ def bases(data, operations):
             kind = blob["type"]
             if kind == "amount_u256":
                 value = (5).to_bytes(32, "big")
+            elif kind == "commitment":
+                value = bytes([165]) * 32
+            elif kind == "octets" and blob["name"] == "predecessor":
+                value = b""
+            elif kind == "octets" and blob["name"] == "source_attestation":
+                value = b"transport-fixture"
             elif kind == "proof":
                 value = b"test-authorization"
             elif kind == "canonical_core":
@@ -235,6 +243,22 @@ def cases(base_rows, random_count):
         add("trailing-word", 70, lambda x: x["words"].append(0), row)
         add("missing-word", 70, lambda x: x["words"].pop(), row)
         add("opcode-above-family", 70, lambda x: x.update(opcode=COUNTS[x["family"]-1]+1), row)
+    by_operation = {(row["family"], row["opcode"]): row for row in base_rows}
+    sync = by_operation[1, 7]
+    add("empty-attestation", "accept:first", lambda x: x["blobs"].__setitem__(2, ""), sync)
+    add("absent-attestation", 70, lambda x: x["blobs"].pop(), sync)
+    add("short-commitment", 70, lambda x: x["blobs"].__setitem__(0, "00" * 31), sync)
+    add("initial-with-predecessor", 70, lambda x: x["blobs"].__setitem__(1, "00" * 32), sync)
+    add("incremental-without-predecessor", 70, lambda x: x["words"].__setitem__(9, 2), sync)
+    add("incremental", "accept:first",
+        lambda x: (x["words"].__setitem__(9, 2), x["blobs"].__setitem__(1, "00" * 32)), sync)
+    add("full-resync", "accept:first", lambda x: x["words"].__setitem__(9, 3), sync)
+    add("unknown-mode", 70, lambda x: x["words"].__setitem__(9, 4), sync)
+    add("maximum-source-position", "accept:first", lambda x: x["words"].__setitem__(8, (1 << 64) - 1), sync)
+    query = by_operation[4, 9]
+    add("unexpected-blob", 70, lambda x: x["blobs"].append(""), query)
+    add("unexpected-deadline", 70, lambda x: x.update(deadline=200), query)
+    legacy_bases = [row for row in base_rows if (row["family"], row["opcode"]) not in ADDED_OPERATIONS]
     state = SEED
 
     def next_number(bound):
@@ -246,7 +270,7 @@ def cases(base_rows, random_count):
         return (z ^ (z >> 31)) % bound
 
     for index in range(random_count):
-        row = copy.deepcopy(base_rows[next_number(len(base_rows))])
+        row = copy.deepcopy(legacy_bases[next_number(len(legacy_bases))])
         row["id"] = f"random-{index:04}"
         row["seed"] = SEED
         row.pop("known_verdict", None)

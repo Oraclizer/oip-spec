@@ -2,11 +2,12 @@
 
 use super::response::{ResponseParameters, ResponseSigner};
 use super::schedule::WireScheduleLimits;
-use super::{WireSecurity, read_at};
+use super::{WireSecurity, commitment_read_at, read_at};
 use crate::authority::identity::{
     Action, Handover, Identity, Operation, ReadRequest, Scope, Security, SessionProof, Signed,
 };
 use crate::authority::reads::Query;
+use crate::authority::sync;
 use crate::authority::recovery::RecoveryProfile;
 use crate::authority::regulation::{
     EnforcementOrder, LegalPayload, LegalStage, Order, SpendPayload,
@@ -14,7 +15,7 @@ use crate::authority::regulation::{
 use crate::authority::{Acknowledgement, CallPayload};
 use crate::lock_finality::{Command, TerminalEvidence};
 use crate::wire::admission::Boundary;
-use crate::wire::codec::{WireError, decode_core, decode_packet};
+use crate::wire::codec::{WireError, decode_core, decode_packet, encode_core};
 use crate::wire::generated::{Core, core::Body};
 use crate::wire::negotiation::Channel;
 use crate::wire::operands::{Operands, decode};
@@ -22,6 +23,7 @@ use crate::{AssetId, CommitCut, Principal, SessionId};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -72,6 +74,8 @@ pub struct EndpointGrant {
     pub spend: BTreeSet<AssetId>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub transfer_owner: BTreeSet<AssetId>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub full_resync: BTreeSet<sync::Stream>,
 }
 
 pub type SessionGrants = BTreeMap<u64, EndpointGrant>;
@@ -122,6 +126,8 @@ pub struct Ed25519Profile {
     /// admits. Absent sets no limit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_delivery_ttl_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "source::SyncPolicy::is_empty")]
+    pub sync: source::SyncPolicy,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -363,6 +369,7 @@ fn authority_policy_binding(config: &Ed25519Profile) -> Result<[u8; 32], WireErr
         || !legal::valid_authorities(config, &mut keys)
         || !ack::valid_receivers(config)
         || !source::valid_authorities(&config.sources, &keys)
+        || !config.sync.valid(&keys)
     {
         return Err(INVALID);
     }
@@ -372,6 +379,7 @@ fn authority_policy_binding(config: &Ed25519Profile) -> Result<[u8; 32], WireErr
 fn permits(grant: &EndpointGrant, operation: Operation, scope: Scope) -> bool {
     match (operation, scope) {
         (Operation::Execute, Scope::Asset(asset)) => grant.execute.contains(&asset),
+        (Operation::FullResync, Scope::Commitment(stream)) => grant.full_resync.contains(&stream),
         (Operation::Receipt, Scope::Asset(asset)) => grant.receipts.contains(&asset),
         (Operation::Journal, Scope::Read(ReadRequest::Journal)) => grant.journal,
         (Operation::Historical, Scope::Read(ReadRequest::Historical { query, .. })) => {
@@ -448,17 +456,22 @@ fn supported_call(command: Command) -> bool {
             | Command::Fence { .. }
             | Command::Preempt { .. }
             | Command::Reconcile { .. }
+            | Command::Write { .. }
             | Command::PublishPrimary
     )
 }
 
-fn supported_frame(core: &Core) -> bool {
+fn supported_frame(core: &Core, sync: &source::SyncPolicy) -> bool {
     match core.body.as_ref() {
-        Some(Body::StateSync(op)) => matches!(op.opcode, Some(1..=6)),
+        Some(Body::StateSync(op)) => {
+            matches!(op.opcode, Some(1..=6)) || (sync.accept_sync && op.opcode == Some(7))
+        }
         Some(Body::RegulatoryAction(op)) => matches!(op.opcode, Some(1..=3)),
         Some(Body::Ack(op)) => op.opcode == Some(1),
-        Some(Body::Query(op)) => matches!(op.opcode, Some(1..=8)),
-        Some(Body::LockManagement(op)) => matches!(op.opcode, Some(1..=6)),
+        Some(Body::Query(op)) => {
+            matches!(op.opcode, Some(1..=8)) || (sync.accept_current && op.opcode == Some(9))
+        }
+        Some(Body::LockManagement(op)) => matches!(op.opcode, Some(1..=7)),
         Some(Body::Governance(op)) => op.opcode == Some(1),
         _ => false,
     }
@@ -567,6 +580,19 @@ impl<C: AuthorityClock> Security for Ed25519Security<C> {
                 })
     }
 
+    fn permit_session(
+        &self, identity: Identity, proof: SessionProof, target: u64, operation: Operation, scope: Scope,
+    ) -> bool {
+        proof.epoch == self.config.authority_epoch
+            && self.grant(identity, proof.session, target, operation, scope)
+    }
+
+    fn verify_commitment_attestation(&self, call: &sync::Call<'_>) -> bool {
+        self.config.sync.accept_sync
+            && self.config.profile.deployment == call.deployment
+            && self.config.sync.verifies(call)
+    }
+
     fn verify(
         &self,
         identity: Identity,
@@ -633,17 +659,44 @@ impl<C: AuthorityClock> Security for Ed25519Security<C> {
         {
             return false;
         }
+        let mut exact = Cow::Borrowed(packet.core_bytes());
         let operand = match decode(core, self.config.max_nesting) {
             Ok(Operands::Receipt { session, original })
                 if operation == Operation::Receipt
                     && session == proof.session
                     && crate::wire::operands::same_original(core, &original) =>
             {
-                decode(&original, self.config.max_nesting - 1)
+                let decoded = decode(&original, self.config.max_nesting - 1);
+                if matches!(decoded, Ok(Operands::SyncCommitment { .. })) {
+                    let Ok(bytes) = encode_core(&original) else { return false };
+                    exact = Cow::Owned(bytes);
+                }
+                decoded
             }
             other => other,
         };
         match (operation, signed, operand) {
+            (
+                Operation::Execute | Operation::Receipt,
+                Signed::Call { id, action: Action::SyncCommitment(expected) },
+                Ok(Operands::SyncCommitment { id: decoded, session, asset, .. }),
+            ) => {
+                self.config.sync.accept_sync
+                    && id == decoded
+                    && session == proof.session
+                    && exact.as_ref() == expected.exact
+                    && self.grant(identity, proof.session, target, operation, Scope::Asset(asset))
+            }
+            (
+                Operation::Current,
+                Signed::Read(expected),
+                Ok(read @ Operands::CurrentCommitment { session, .. }),
+            ) => {
+                self.config.sync.accept_current
+                    && session == proof.session
+                    && commitment_read_at(&read, proof.epoch) == Some(expected)
+                    && self.grant(identity, proof.session, target, operation, Scope::Read(expected))
+            }
             (
                 Operation::Execute | Operation::Receipt,
                 Signed::Call {
@@ -888,7 +941,7 @@ impl<C: AuthorityClock> WireSecurity for Ed25519Security<C> {
     }
 
     fn accepts_operation(&self, _: &Channel, core: &Core) -> bool {
-        supported_frame(core)
+        supported_frame(core, &self.config.sync)
     }
 
     fn max_delivery_ttl(&self, _: &Channel) -> Option<u64> {
@@ -899,7 +952,7 @@ impl<C: AuthorityClock> WireSecurity for Ed25519Security<C> {
         let principal = core.principal?;
         let peer = self.config.peers.get(&principal)?;
         if !self.channel_current(channel)
-            || !supported_frame(core)
+            || !supported_frame(core, &self.config.sync)
             || (matches!(core.body, Some(Body::Ack(_)))
                 && self.config.acknowledgers.get(&channel.remote()) != Some(&principal))
             || live.authority_epoch != self.config.authority_epoch

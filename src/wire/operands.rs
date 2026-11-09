@@ -5,7 +5,7 @@ use super::codec::{Result, Unsigned256, WireError, body, decode_core};
 use super::generated::{Core, Operation, core::Body, operation::AppealDeadline};
 use super::negotiation::Offer;
 use crate::authority::identity::Handover;
-use crate::authority::recovery::wire::response::ResponseCode;
+use crate::authority::recovery::wire::response::{ResponseCode, ResponseStatus};
 use crate::authority::regulation::{
     Action as LegalAction, EnforcementOrder, LegalStage, Order, SpendKind, SpendScope,
 };
@@ -93,6 +93,14 @@ impl ReadOperand {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u64)]
+pub enum SyncMode {
+    Initial = 1,
+    Incremental = 2,
+    FullResync = 3,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Operands {
     Ordinary {
@@ -100,7 +108,28 @@ pub enum Operands {
         payload: CallPayload,
         proofs: Vec<Vec<u8>>,
     },
+    SyncCommitment {
+        id: CallId,
+        message_reference: u64,
+        session: u64,
+        cut: CommitCut,
+        origin_epoch: u64,
+        origin_domain: u64,
+        origin_event: u64,
+        asset: u64,
+        source_position: u64,
+        mode: SyncMode,
+        commitment: [u8; 32],
+        predecessor: Option<[u8; 32]>,
+        source_attestation: Vec<u8>,
+    },
     Read(ReadOperand),
+    CurrentCommitment {
+        session: u64,
+        revision: usize,
+        asset: u64,
+        origin_domain: u64,
+    },
     Receipt {
         session: u64,
         original: Box<Core>,
@@ -252,7 +281,10 @@ fn read(op: &Operation, depth: usize) -> Result<Operands> {
         let core = decode_core(original)?;
         if !matches!(
             decode(&core, depth - 1)?,
-            Operands::Ordinary { .. } | Operands::Legal { .. } | Operands::Spend { .. }
+            Operands::Ordinary { .. }
+                | Operands::Legal { .. }
+                | Operands::Spend { .. }
+                | Operands::SyncCommitment { .. }
         ) {
             return Err(BAD);
         }
@@ -263,6 +295,18 @@ fn read(op: &Operation, depth: usize) -> Result<Operands> {
     }
     if !op.blobs.is_empty() {
         return Err(BAD);
+    }
+    if op.opcode == Some(9) {
+        let revision = words.size()?;
+        let asset = words.word()?;
+        let origin_domain = words.word()?;
+        words.end()?;
+        return Ok(Operands::CurrentCommitment {
+            session,
+            revision,
+            asset,
+            origin_domain,
+        });
     }
     Ok(Operands::Read(match op.opcode {
         Some(1) => ReadOperand::Current {
@@ -303,6 +347,53 @@ fn read(op: &Operation, depth: usize) -> Result<Operands> {
 
 fn amount(bytes: &[u8]) -> Result<u64> {
     Unsigned256::from_bytes(bytes)?.product_amount()
+}
+
+fn sync_commitment(core: &Core, op: &Operation) -> Result<Operands> {
+    let [message_reference, sequence, session, revision, origin_epoch, origin_domain, origin_event, asset, source_position, mode] =
+        op.words.as_slice()
+    else {
+        return Err(BAD);
+    };
+    let [commitment, predecessor, source_attestation] = op.blobs.as_slice() else {
+        return Err(BAD);
+    };
+    if op.appeal_deadline.is_some() {
+        return Err(BAD);
+    }
+    let mode = match mode {
+        1 => SyncMode::Initial,
+        2 => SyncMode::Incremental,
+        3 => SyncMode::FullResync,
+        _ => return Err(BAD),
+    };
+    let predecessor = match mode {
+        SyncMode::Incremental => Some(predecessor.as_slice().try_into().map_err(|_| BAD)?),
+        _ if predecessor.is_empty() => None,
+        _ => return Err(BAD),
+    };
+    Ok(Operands::SyncCommitment {
+        id: CallId {
+            namespace: core.principal.ok_or(BAD)?,
+            sequence: *sequence,
+        },
+        message_reference: *message_reference,
+        session: *session,
+        cut: CommitCut {
+            authority_epoch: core.authority_epoch.ok_or(BAD)?,
+            revision: usize::try_from(*revision).map_err(|_| BAD)?,
+        },
+        origin_epoch: *origin_epoch,
+        origin_domain: *origin_domain,
+        origin_event: *origin_event,
+        asset: *asset,
+        source_position: *source_position,
+        mode,
+        commitment: commitment.as_slice().try_into().map_err(|_| BAD)?,
+        predecessor,
+        // The authority evaluates the proof after admitting the request and checking its cut.
+        source_attestation: source_attestation.clone(),
+    })
 }
 
 fn kind(word: u64) -> Result<TerminalKind> {
@@ -636,17 +727,23 @@ fn ack(
         {
             return Err(WireError::InvalidSource);
         }
-        let matches_debit_revision =
-            |revision| commit.is_none_or(|reference| reference.position == revision);
-        let mut sync_call =
-            matches!(&nested.body, Some(Body::StateSync(op)) if op.opcode == Some(7));
-        match decoded {
+        let decoded = match decoded {
+            Operands::Receipt { original, .. } => {
+                if !same_original(&nested, &original) {
+                    return Err(WireError::InvalidSource);
+                }
+                decode(&original, depth.checked_sub(2).ok_or(BAD)?)?
+            }
+            decoded => decoded,
+        };
+        let sync_call = match decoded {
             Operands::Ordinary { id: nested, payload, .. } => {
                 if nested != id || (matches!(payload.command, Command::Debit { .. })
-                    && !matches_debit_revision(payload.cut.revision))
+                    && commit.is_some_and(|reference| reference.position != payload.cut.revision))
                 {
                     return Err(BAD);
                 }
+                false
             }
             Operands::Legal { id: nested, .. }
             | Operands::Spend { id: nested, .. }
@@ -654,23 +751,19 @@ fn ack(
             {
                 return Err(BAD);
             }
-            Operands::Receipt { original, .. } => {
-                if !same_original(&nested, &original) {
-                    return Err(WireError::InvalidSource);
-                }
-                let (family, operation) = body(&original)?;
-                let (nested_id, payload, _) = native(&original, operation)?;
-                if nested_id != id || (family == 1 && operation.opcode == Some(1)
-                    && !matches_debit_revision(payload.cut.revision))
-                {
+            Operands::SyncCommitment { id: nested, .. } => {
+                if nested != id {
                     return Err(BAD);
                 }
-                sync_call = family == 1 && operation.opcode == Some(7);
+                true
             }
-            Operands::Response { .. } => return Err(BAD),
-            _ => (),
-        }
-        if sync_descriptor.is_some() && !sync_call {
+            Operands::CurrentCommitment { .. } | Operands::Response { .. } => return Err(BAD),
+            _ => false,
+        };
+        if (sync_descriptor.is_some() && !sync_call)
+            || (check_sync_response_codes && sync_call
+                && !ResponseStatus::compatible_with_sync(kind, code, committed))
+        {
             return Err(BAD);
         }
         return Ok(Operands::Response {
@@ -831,6 +924,7 @@ fn decode_with_response_checks(
     }
     let (family, op) = body(core)?;
     match (family, op.opcode) {
+        (1, Some(7)) => sync_commitment(core, op),
         (1, Some(6)) | (2, Some(3)) => spend(core, family, op),
         (1 | 3, _) => ordinary(core, family, op),
         (2, _) => legal(core, op),

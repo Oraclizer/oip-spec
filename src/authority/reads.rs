@@ -4,6 +4,7 @@
 use super::Snapshot;
 use super::recovery::RecoveryProfile;
 use super::regulation::{LegalDecision, LegalRead, Mode};
+use super::sync::{Commitment, Stream};
 use super::{
     Acknowledgement, Authority, CallPayload, Collection, OriginDecision, PrimarySnapshot,
     SecondaryJob, SettlementKey,
@@ -27,6 +28,7 @@ pub enum Query {
     TerminalReceipt(OriginKey),
     /// Unallocated source units across accounts at this exact domain and asset.
     SourcePool(EndpointId, AssetId),
+    Commitment(Stream),
 }
 
 impl Query {
@@ -48,6 +50,7 @@ impl Query {
                 binding.origin == origin
             }
             Self::RegulatoryState(_, asset) => binding.asset == asset,
+            Self::Commitment(_) => false,
         }
     }
 }
@@ -79,6 +82,7 @@ pub enum Value {
     Regulatory(Option<Mode>),
     /// A source pool can span multiple account-sized balances.
     WideUnits(u128),
+    Commitment(Option<Commitment>),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -180,6 +184,12 @@ struct ReadProjection {
     legal: BTreeMap<OriginKey, LegalRead>,
     #[serde(with = "crate::authority::recovery::ordered_map")]
     modes: BTreeMap<(EndpointId, AssetId), Mode>,
+    #[serde(
+        default,
+        skip_serializing_if = "BTreeMap::is_empty",
+        with = "crate::authority::recovery::ordered_map"
+    )]
+    commitments: BTreeMap<Stream, Commitment>,
 }
 
 impl ReadProjection {
@@ -188,6 +198,7 @@ impl ReadProjection {
             ledger: primary.ledger.project_reads(),
             legal: primary.regulation.legal_reads(),
             modes: primary.regulation.modes(),
+            commitments: primary.sync.entries.clone(),
             origins: primary
                 .origins
                 .iter()
@@ -312,6 +323,12 @@ impl ReadProjection {
                     self.origins.get(&origin).and_then(|slot| slot.decision),
                 ))
             }
+            Query::Commitment(stream) => {
+                if !self.ledger.asset_values.contains_key(&stream.asset) {
+                    return Err(ReadError::Unavailable);
+                }
+                Ok(Value::Commitment(self.commitments.get(&stream).copied()))
+            }
         }
     }
 }
@@ -368,6 +385,10 @@ impl ReadHistory {
             .get(revision)
             .ok_or(ReadError::Unavailable)?
             .raw_value(query)
+    }
+
+    pub(super) fn commitment_at(&self, revision: usize, stream: Stream) -> Option<Commitment> {
+        self.prefixes.get(revision)?.commitments.get(&stream).copied()
     }
 
     fn value(&self, revision: usize, query: Query) -> Result<Value, ReadError> {

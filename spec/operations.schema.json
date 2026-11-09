@@ -70,7 +70,7 @@
         "required": ["description"],
         "properties": {
           "length": {"type": "integer", "minimum": 1},
-          "min_length": {"type": "integer", "minimum": 1},
+          "min_length": {"type": "integer", "minimum": 0},
           "description": {"$ref": "#/$defs/text"}
         },
         "not": {"required": ["length", "min_length"]}

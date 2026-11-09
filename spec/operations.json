@@ -1,8 +1,8 @@
 {
   "table_format": 1,
   "protocol_version": 6,
-  "title": "OIP v0.6 operation operands",
-  "summary": "Positional operand layout of every OIP v0.6 operation. The Core family and the operation opcode select exactly one layout of ordered words, ordered blobs and a deadline mode. Field names document the layout and never appear on the wire.",
+  "title": "OIP v0.6.1 operation operands",
+  "summary": "Positional operand layout of every OIP v0.6.1 operation. The Core family and the operation opcode select exactly one layout of ordered words, ordered blobs and a deadline mode. Field names document the layout and never appear on the wire.",
   "layout_rules": [
     "The family and the opcode select exactly one layout. A decoder MUST reject an opcode outside 1 through the operation count of its family with INVALID_FORMAT.",
     "Words are read in table order and a layout MUST consume every word. A missing word or a trailing word is INVALID_FORMAT.",
@@ -52,6 +52,8 @@
   },
   "blob_types": {
     "amount_u256": {"length": 32, "description": "Unsigned 256-bit integer as exactly 32 big-endian bytes. The product range is u64, so the first 24 bytes MUST be zero."},
+    "commitment": {"length": 32, "description": "A 32-byte state commitment."},
+    "octets": {"min_length": 0, "description": "A byte string whose length may be zero. The operand defines its allowed lengths."},
     "proof": {"min_length": 1, "description": "Non-empty authorization or evidence bytes. The configured adapter verifies them against the exact canonical fields."},
     "canonical_core": {"min_length": 1, "description": "Complete canonical encoding of a v0.6 Core, decoded with the nesting limit reduced by one. It is data and is not admitted again as a delivery."},
     "endpoint_contexts_json": {"min_length": 1, "description": "Compact JSON array of endpoint context objects with the keys endpoint, epoch, grants, dependencies and write_permissions in that order. The array is non-empty and its endpoint values are strictly ascending. The bytes MUST equal the reference serializer's re-encoding of the decoded value."},
@@ -142,6 +144,14 @@
         {"code": 4, "name": "ROOT_BALANCE"},
         {"code": 5, "name": "REGULATORY_STATE"},
         {"code": 6, "name": "TERMINAL_RECEIPT"}
+      ]
+    },
+    "sync_mode": {
+      "description": "Mode of a state commitment synchronization call.",
+      "values": [
+        {"code": 1, "name": "INITIAL", "description": "Install the first source snapshot for the stream."},
+        {"code": 2, "name": "INCREMENTAL", "description": "Advance the stream from its retained commitment."},
+        {"code": 3, "name": "FULL_RESYNC", "description": "Replace the retained entry with a source snapshot under a scoped FullResync grant."}
       ]
     },
     "response_kind": {
@@ -405,6 +415,34 @@
       "recorded_codes": [1, 2, 3, 28]
     },
     {
+      "family": 1, "opcode": 7, "name": "SyncCommitment", "title": "sync commitment",
+      "summary": "Synchronize the state commitment of an asset and origin domain at the receiving authority.",
+      "reference_accepts": true,
+      "words": [
+        {"kind": "word", "name": "message_reference", "type": "u64", "description": "Internal message reference."},
+        {"kind": "word", "name": "call_sequence", "type": "call_sequence"},
+        {"kind": "word", "name": "session", "type": "session_id"},
+        {"kind": "word", "name": "revision", "type": "revision"},
+        {"kind": "word", "name": "origin_epoch", "type": "epoch", "description": "Signing epoch of the attested origin."},
+        {"kind": "word", "name": "origin_domain", "type": "domain_id", "description": "Attested origin domain. The authenticated caller may have a different domain."},
+        {"kind": "word", "name": "origin_event", "type": "event_id"},
+        {"kind": "word", "name": "asset", "type": "asset_id"},
+        {"kind": "word", "name": "source_position", "type": "u64", "description": "Position in the stream for this asset and origin domain."},
+        {"kind": "word", "name": "mode", "type": "code", "enum": "sync_mode", "accepted": "all"}
+      ],
+      "blobs": [
+        {"name": "commitment", "type": "commitment"},
+        {"name": "predecessor", "type": "octets", "description": "Exactly 32 bytes for INCREMENTAL. An empty blob for INITIAL and FULL_RESYNC."},
+        {"name": "source_attestation", "type": "octets", "description": "Opaque at transport admission. The receiving authority checks the [source attestation](state-commitment-sync.md#source-attestation)."}
+      ],
+      "deadline": "absent",
+      "checks": [
+        {"when": "decode", "rule": "The predecessor has the length specified by the mode.", "error": "INVALID_FORMAT"}
+      ],
+      "call": true,
+      "recorded_codes": [1, 2, 3, 29, 39, 40, 41]
+    },
+    {
       "family": 2, "opcode": 1, "name": "EmitLegalOrder", "title": "emit legal order",
       "summary": "Legal order at the source emission stage.",
       "reference_accepts": true,
@@ -613,7 +651,7 @@
     {
       "family": 3, "opcode": 7, "name": "Write", "title": "write",
       "summary": "Writes a permitted data value for the asset.",
-      "reference_accepts": false,
+      "reference_accepts": true,
       "words": [
         {"kind": "use", "group": "call_prefix"},
         {"kind": "use", "group": "credential"},
@@ -746,9 +784,23 @@
       "deadline": "absent",
       "checks": [
         {"when": "decode", "rule": "The nesting limit is at least 2, which leaves one level for original_core.", "error": "INVALID_FORMAT"},
-        {"when": "decode", "rule": "original_core decodes as an ordinary, legal or spend call.", "error": "INVALID_FORMAT"},
+        {"when": "decode", "rule": "original_core decodes as an ordinary, legal, spend or synchronization call.", "error": "INVALID_FORMAT"},
         {"when": "consumer", "rule": "The original call has the deployment, source domain, target domain, principal and authority epoch of this Core and version 6.", "error": "INVALID_SOURCE"}
       ],
+      "call": false
+    },
+    {
+      "family": 4, "opcode": 9, "name": "CurrentCommitment", "title": "current commitment",
+      "summary": "Read the current state commitment for an asset and origin domain at the signed receiver cut.",
+      "reference_accepts": true,
+      "words": [
+        {"kind": "word", "name": "session", "type": "session_id"},
+        {"kind": "word", "name": "revision", "type": "revision"},
+        {"kind": "word", "name": "asset", "type": "asset_id"},
+        {"kind": "word", "name": "origin_domain", "type": "domain_id"}
+      ],
+      "blobs": [],
+      "deadline": "absent",
       "call": false
     },
     {
@@ -799,9 +851,12 @@
         {"when": "decode", "rule": "A commit is present only when kind is RECORDED.", "error": "INVALID_FORMAT"},
         {"when": "decode", "rule": "The original has the version and deployment of this Core, its principal equals caller_namespace, and its source and target domains are this Core's target and source domains.", "error": "INVALID_SOURCE"},
         {"when": "decode", "rule": "The original is not a correlated response.", "error": "INVALID_FORMAT"},
+        {"when": "decode", "rule": "A CurrentCommitment query has no correlated response.", "error": "INVALID_FORMAT"},
         {"when": "decode", "rule": "An original call has the call identifier (caller_namespace, call_sequence). When it is a Debit, a present commit position equals its revision.", "error": "INVALID_FORMAT"},
         {"when": "decode", "rule": "An original exact receipt query carries a call with the deployment, source domain, target domain, principal and authority epoch of that query and version 6.", "error": "INVALID_SOURCE"},
         {"when": "decode", "rule": "An original exact receipt query carries a call with the call identifier (caller_namespace, call_sequence). When that call is a Debit, a present commit position equals its revision.", "error": "INVALID_FORMAT"},
+        {"when": "decode", "rule": "Codes 29, 39, 40 and 41 are recorded results of SyncCommitment. Code 29 carries a commit position and codes 39, 40 and 41 omit it.", "error": "INVALID_FORMAT"},
+        {"when": "decode", "rule": "When the original call is SyncCommitment, a known code has its declared kind and commit presence and is compatible with that call.", "error": "INVALID_FORMAT"},
         {"when": "consumer", "rule": "original_core equals the caller's retained canonical request and the call identifier equals that request's call identifier.", "error": "REPLAY_CONFLICT"}
       ],
       "call": false,

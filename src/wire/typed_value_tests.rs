@@ -81,6 +81,23 @@ pub(super) fn operand_ir(core:&Core,value:&Operands,depth:usize)->Ir {
             native(*id,payload.message_id,payload.session,payload.cut,payload.origin_epoch,payload.binding,payload.endpoint,payload.caller),
             option(payload.credential,|c|node(101,vec![scalar(c.asset),scalar(c.holder),scalar(c.generation),scalar(c.epoch),pair(c.origin.domain,c.origin.event)])),
             list(payload.versions.iter().map(|(asset,version)|pair(*asset,*version))),command(payload.command),list(proofs.iter().map(|p|bytes(p)))])},
+        Operands::SyncCommitment {
+            id, message_reference, session, cut: expected, origin_epoch, origin_domain,
+            origin_event, asset, source_position, mode, commitment, predecessor, source_attestation,
+        } => node(22, vec![
+            scalar(*message_reference),
+            pair(id.namespace, id.sequence),
+            scalar(*session),
+            cut(*expected),
+            scalar(*origin_epoch),
+            pair(*origin_domain, *origin_event),
+            scalar(*asset),
+            scalar(*source_position),
+            scalar(*mode as u64),
+            bytes(commitment),
+            option(predecessor.as_ref(), |predecessor| bytes(predecessor)),
+            bytes(source_attestation),
+        ]),
         Operands::Legal{id,stage,payload,order,proof}=>{
             assert_eq!(order.binding,payload.binding,"typed legal binding copy diverged");
             assert_eq!(order.action,payload.action,"typed legal action copy diverged");
@@ -100,6 +117,12 @@ pub(super) fn operand_ir(core:&Core,value:&Operands,depth:usize)->Ir {
                     list(a.assets.iter().copied().map(scalar)),option(a.prior_seizure,|o|pair(o.domain,o.event)),option(a.appeal_deadline,scalar)])),
                 option(proof.as_deref(),bytes)])])},
         Operands::Read(value)=>read(*value,core.authority_epoch.expect("typed epoch")),
+        Operands::CurrentCommitment { session, revision, asset, origin_domain } => {
+            let epoch = core.authority_epoch.expect("typed epoch");
+            let proof = node(104, vec![scalar(*session), scalar(epoch)]);
+            let request = node(156, vec![pair(epoch, *revision as u64), scalar(*asset), scalar(*origin_domain)]);
+            node(13, vec![proof, request])
+        },
         Operands::Receipt{session,original}=>{
             let decoded=decode(original,depth.checked_sub(1).expect("typed receipt depth")).expect("actual nested operand");
             node(15,vec![scalar(*session),bytes(&encode_core(original).expect("decoded original reencoding")),operand_ir(original,&decoded,depth-1)])

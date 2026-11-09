@@ -22,7 +22,7 @@
   [Changelog](CHANGELOG.md)
 </div>
 
-> **Unaudited. Not for production.** OIP v0.6.0 is a prototype-stage
+> **Unaudited. Not for production.** OIP v0.6.1 is a prototype-stage
 > specification draft. The Rust and Go code here makes its rules executable
 > and testable. Isabelle/HOL proofs cover models of the protocol under stated
 > assumptions, and the required CI check holds the Rust and Go code to models
@@ -104,12 +104,13 @@ operation is in [`spec/operations.md`](spec/operations.md).
 
 | Version | Defined in | Treatment in this repository |
 | --- | --- | --- |
-| v0.6.0, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Current draft. Signed protobuf messages; the reference profile signs with Ed25519 |
+| v0.6.1, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Current draft. Adds state commitment synchronization and accepts Write in the Ed25519 reference profile |
+| v0.6.0, wire version 6 | [v0.6.0 release](https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.0) | Earlier version 6 operation set and matching vectors |
 | v0.5 | [OIP v0.5 documentation](https://docs.oraclizer.io/oip-v05/oip-overview/) | Used only with an authenticated, permitted legacy peer and an explicitly configured codec for the common Query and Heartbeat operations. The codec is a reference compatibility record and does not interoperate with the wire format in the published v0.5 documentation |
 | Any other version | | Refused with `UNSUPPORTED_VERSION`. Parse, signature, timeout and rejection errors never select another version |
 
-The Ed25519 reference configuration accepts 25 of the 31 operations and
-refuses the other six with `UNSUPPORTED_VERSION` before admission; the
+The Ed25519 reference configuration accepts 28 of the 33 operations and
+refuses the other five with `UNSUPPORTED_VERSION` before admission. The
 [reference configuration](spec/operations.md#reference-configuration) lists
 them.
 
@@ -217,7 +218,9 @@ establish:
 | --- | --- |
 | [Common product model](spec/product-model.md) | Request identity and binding, crash and recovery, interleaving |
 | [Message format and version profiles](spec/wire-conformance.md) | Version negotiation, the signed message, admission and retry, responses, field numbers and operands |
-| [Operation operands](spec/operations.md) | Word layout of all 31 operations, generated from [`operations.json`](spec/operations.json) |
+| [Operation operands](spec/operations.md) | Word layout of all 33 operations, generated from [`operations.json`](spec/operations.json) |
+| [State commitment synchronization](spec/state-commitment-sync.md) | Version 6 operation additions, source attestations and current commitment reads |
+| [Response code allocation](spec/response-code-extension.md) | Assignments, compatibility and retry rules for new results |
 | [Lock and finality rules](spec/lock-finality.md) | Lock ownership, source attestations, pending amounts and terminal evidence |
 | [Identity and ownership handover](spec/identity-handover.md) | Caller and endpoint identity, Ed25519 reference keys, owner and session handover |
 | [Persistence and recovery](spec/persistent-recovery.md) | Durable commits, the etcd control transport, archive selection, retained results and unresolved effects |

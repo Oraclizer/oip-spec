@@ -5,12 +5,19 @@ use crate::OriginKey;
 use crate::authority::recovery::ordered::ControlValue;
 use crate::authority::recovery::ordered::etcd::EtcdTransport;
 use crate::authority::recovery::{HeadError, RecoveryProfile};
+use crate::authority::sync::Stream;
 use crate::lock_finality::TerminalEvidence;
 use crate::wire::codec::WireError;
 use ed25519_dalek::{Signer, SigningKey};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
+
+mod commitment;
+pub use commitment::{
+    CommitmentAuthorities, CommitmentSelection, CommitmentVote, SignedCommitment, SyncPolicy,
+    SyncRoster,
+};
 
 pub type SourceAuthorities = BTreeMap<u64, BTreeMap<u64, SourceAuthority>>;
 
@@ -23,14 +30,17 @@ pub struct SourceAuthority {
 
 impl SourceAuthority {
     fn valid(&self) -> bool {
-        let distinct: BTreeSet<_> = self.signers.values().copied().collect();
-        self.quorum > 0
-            && self.quorum <= self.signers.len()
-            && distinct.len() == self.signers.len()
-            && !distinct.contains(&self.issuer)
+        valid_signers(self.quorum, &self.signers)
+            && !self.signers.values().any(|key| *key == self.issuer)
             && verifying_key(&self.issuer).is_some()
-            && distinct.iter().all(|key| verifying_key(key).is_some())
     }
+}
+
+fn valid_signers(quorum: usize, signers: &BTreeMap<u64, [u8; 32]>) -> bool {
+    let distinct: BTreeSet<_> = signers.values().collect();
+    quorum > 0 && quorum <= signers.len()
+        && distinct.len() == signers.len()
+        && distinct.iter().all(|key| verifying_key(key).is_some())
 }
 
 pub(super) fn valid_authorities(
@@ -135,6 +145,8 @@ struct SourceStores {
     journal: [u8; 32],
     witness: [u8; 32],
     authorities: [u8; 32],
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    commitment_authorities: Option<[u8; 32]>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -168,6 +180,8 @@ struct SourceState {
     stores: SourceStores,
     preparation: Option<Mark>,
     decisions: Vec<SignedSourceDecision>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    commitments: Vec<SignedCommitment>,
 }
 
 impl SourceState {
@@ -180,12 +194,23 @@ impl SourceState {
     fn appended(
         mut self,
         preparation: Mark,
-        decision: SignedSourceDecision,
+        addition: Addition<'_>,
     ) -> Result<Self, HeadError> {
-        let index = self.decision(origin_of(&decision)).err().ok_or(HeadError)?;
+        match addition {
+            Addition::Decision(decision) => {
+                let index = self.decision(origin_of(decision)).err().ok_or(HeadError)?;
+                self.decisions.insert(index, decision.clone());
+            }
+            Addition::Commitment(commitment) => self.commitments.push(commitment.clone()),
+        }
         self.preparation = Some(preparation);
-        self.decisions.insert(index, decision);
         Ok(self)
+    }
+
+    fn current_commitment(&self, stream: Stream) -> Result<&SignedCommitment, HeadError> {
+        self.commitments.iter().rev().find(|record| {
+            record.statement().is_ok_and(|statement| commitment::stream_of(statement) == stream)
+        }).ok_or(HeadError)
     }
 }
 
@@ -212,10 +237,41 @@ enum WitnessSelection {
         before: SelectedSource,
         decision: SignedSourceDecision,
     },
+    AppendingCommitment {
+        before: SelectedSource,
+        commitment: SignedCommitment,
+    },
     Repairing {
         selected: SelectedSource,
         observed_journal: Mark,
     },
+}
+
+#[derive(Clone, Copy)]
+enum Addition<'a> {
+    Decision(&'a SignedSourceDecision),
+    Commitment(&'a SignedCommitment),
+}
+
+impl Addition<'_> {
+    fn reserve(self, before: SelectedSource) -> WitnessSelection {
+        match self {
+            Self::Decision(decision) => WitnessSelection::Appending { before, decision: decision.clone() },
+            Self::Commitment(commitment) => WitnessSelection::AppendingCommitment {
+                before, commitment: commitment.clone(),
+            },
+        }
+    }
+
+    fn reserved(self, selection: WitnessSelection) -> Option<SelectedSource> {
+        match (self, selection) {
+            (Self::Decision(decision), WitnessSelection::Appending { before, decision: reserved })
+                if *decision == reserved => Some(before),
+            (Self::Commitment(commitment), WitnessSelection::AppendingCommitment { before, commitment: reserved })
+                if *commitment == reserved => Some(before),
+            _ => None,
+        }
+    }
 }
 
 /// Trusted source writer. Both stores require their own write credentials.
@@ -231,6 +287,7 @@ pub struct SourceReader {
     profile: RecoveryProfile,
     binding: SourceStores,
     authorities: SourceAuthorities,
+    commitment_authorities: CommitmentAuthorities,
 }
 
 impl SourceJournal {
@@ -242,6 +299,20 @@ impl SourceJournal {
     ) -> Result<Self, HeadError> {
         Ok(Self {
             stores: SourceReader::new(journal, witness, profile, authorities)?,
+        })
+    }
+
+    pub fn new_with_commitments(
+        journal: EtcdTransport,
+        witness: EtcdTransport,
+        profile: RecoveryProfile,
+        authorities: SourceAuthorities,
+        commitment_authorities: CommitmentAuthorities,
+    ) -> Result<Self, HeadError> {
+        Ok(Self {
+            stores: SourceReader::new_with_commitments(
+                journal, witness, profile, authorities, commitment_authorities,
+            )?,
         })
     }
 
@@ -284,7 +355,7 @@ impl SourceJournal {
         if !self.stores.valid_decision(decision) {
             return Err(HeadError);
         }
-        self.append(decision).or_else(|_| {
+        self.append(Addition::Decision(decision)).or_else(|_| {
             if self.stores.decision(origin_of(decision))? == *decision {
                 Ok(false)
             } else {
@@ -293,44 +364,49 @@ impl SourceJournal {
         })
     }
 
-    fn append(&self, decision: &SignedSourceDecision) -> Result<bool, HeadError> {
-        let (reserved, before) = self.reserve_append(decision)?;
-        let state = before
-            .state
-            .appended(Mark::of(&reserved), decision.clone())?;
+    /// Record an authenticated external observation with a monotone stream position.
+    pub fn record_commitment(&self, record: &SignedCommitment) -> Result<bool, HeadError> {
+        let statement = self.stores.authenticated_commitment(record).ok_or(HeadError)?;
+        self.append(Addition::Commitment(record)).or_else(|_| {
+            let journal = self.stores.journal.current()?;
+            let state = self.stores.decode_state(&journal.bytes)?;
+            self.stores.confirm_selected(&journal, &state)?;
+            (state.current_commitment(commitment::stream_of(statement))? == record)
+                .then_some(false).ok_or(HeadError)
+        })
+    }
+
+    fn append(&self, addition: Addition<'_>) -> Result<bool, HeadError> {
+        let (reserved, before) = self.reserve_append(addition)?;
+        let state = before.state.appended(Mark::of(&reserved), addition)?;
         let prepared = self.prepare(before.journal, &state)?;
         self.publish(&reserved, state, prepared)
     }
 
     fn reserve_append(
         &self,
-        decision: &SignedSourceDecision,
+        addition: Addition<'_>,
     ) -> Result<(ControlValue, SelectedSource), HeadError> {
         let journal = self.stores.journal.current()?;
         let (observed, selection) = self.stores.selection()?;
         match selection {
             Some(WitnessSelection::Selected(before)) => {
                 let state = self.stores.decode_state(&journal.bytes)?;
-                if !before.matches(&journal, &state) || state.decision(origin_of(decision)).is_ok()
+                if !before.matches(&journal, &state) {
+                    return Err(HeadError);
+                }
+                let bounded = state.appended(Mark::ENCODING_BOUND, addition)?;
+                if matches!(addition, Addition::Commitment(_))
+                    && !self.stores.valid_commitments(&bounded.commitments)
                 {
                     return Err(HeadError);
                 }
-                let bounded = before
-                    .state
-                    .clone()
-                    .appended(Mark::ENCODING_BOUND, decision.clone())?;
                 self.require_capacity(&bounded)?;
-                let proposed = WitnessSelection::Appending {
-                    before: before.clone(),
-                    decision: decision.clone(),
-                };
+                let proposed = addition.reserve(before.clone());
                 Ok((self.reserve(&observed, &proposed)?, before))
             }
-            Some(WitnessSelection::Appending {
-                before,
-                decision: reserved,
-            }) if reserved == *decision => Ok((observed, before)),
-            _ => Err(HeadError),
+            Some(selection) => Ok((observed, addition.reserved(selection).ok_or(HeadError)?)),
+            None => Err(HeadError),
         }
     }
 
@@ -449,9 +525,24 @@ impl SourceReader {
         profile: RecoveryProfile,
         authorities: SourceAuthorities,
     ) -> Result<Self, HeadError> {
+        Self::new_with_commitments(journal, witness, profile, authorities, BTreeMap::new())
+    }
+
+    pub fn new_with_commitments(
+        journal: EtcdTransport,
+        witness: EtcdTransport,
+        profile: RecoveryProfile,
+        authorities: SourceAuthorities,
+        commitment_authorities: CommitmentAuthorities,
+    ) -> Result<Self, HeadError> {
         if !journal.distinct_source_stores(&witness)
-            || authorities.is_empty()
+            || (authorities.is_empty() && commitment_authorities.is_empty())
             || !valid_authorities(&authorities, &BTreeSet::new())
+            || !commitment_authorities.values().all(|epochs| {
+                !epochs.is_empty() && epochs.values().all(|rosters| {
+                    !rosters.is_empty() && rosters.values().all(SourceAuthority::valid)
+                })
+            })
         {
             return Err(HeadError);
         }
@@ -459,6 +550,11 @@ impl SourceReader {
             journal: journal.source_store_binding(),
             witness: witness.source_store_binding(),
             authorities: Sha256::digest(encode(&authorities)?).into(),
+            commitment_authorities: if commitment_authorities.is_empty() {
+                None
+            } else {
+                Some(Sha256::digest(encode(&commitment_authorities)?).into())
+            },
         };
         Ok(Self {
             journal,
@@ -466,6 +562,7 @@ impl SourceReader {
             profile,
             binding,
             authorities,
+            commitment_authorities,
         })
     }
 
@@ -496,6 +593,7 @@ impl SourceReader {
             stores: self.binding,
             preparation: None,
             decisions: Vec::new(),
+            commitments: Vec::new(),
         }
     }
 
@@ -507,7 +605,7 @@ impl SourceReader {
     fn valid_state(&self, state: &SourceState) -> bool {
         state.profile == self.profile
             && state.stores == self.binding
-            && state.decisions.is_empty() == state.preparation.is_none()
+            && (state.decisions.is_empty() && state.commitments.is_empty()) == state.preparation.is_none()
             && state.preparation.is_none_or(|mark| mark.revision != 0)
             && state
                 .decisions
@@ -517,6 +615,7 @@ impl SourceReader {
                 .decisions
                 .iter()
                 .all(|decision| self.valid_decision(decision))
+            && self.valid_commitments(&state.commitments)
     }
 
     fn selection(&self) -> Result<(ControlValue, Option<WitnessSelection>), HeadError> {
@@ -543,6 +642,11 @@ impl SourceReader {
                 valid_selected(before)
                     && self.valid_decision(decision)
                     && before.state.decision(origin_of(decision)).is_err()
+            }
+            WitnessSelection::AppendingCommitment { before, commitment } => {
+                valid_selected(before) && before.state.clone()
+                    .appended(Mark::ENCODING_BOUND, Addition::Commitment(commitment))
+                    .is_ok_and(|state| self.valid_commitments(&state.commitments))
             }
         };
         valid.then_some((raw, Some(selection))).ok_or(HeadError)
@@ -576,8 +680,7 @@ fn canonical<T: DeserializeOwned + Serialize>(bytes: &[u8]) -> Result<T, HeadErr
     Ok(value)
 }
 
-/// Held by one registered source attester. The only signing entry consumes
-/// the authoritative journal and an origin identifier.
+/// Held by one registered attester. Issuance reads the authoritative journal.
 pub struct SourceSigner {
     id: u64,
     key: SigningKey,

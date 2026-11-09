@@ -524,6 +524,7 @@ fn reference_ed25519_live_witness_debit_and_receipt() {
 mod terminal;
 
 mod regulatory;
+mod sync;
 
 #[cfg(target_os = "linux")]
 mod handover;

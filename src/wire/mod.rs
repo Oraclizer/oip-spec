@@ -7,6 +7,9 @@ pub mod admission;
 pub mod legacy;
 pub mod negotiation;
 pub mod operands;
+pub mod source_attestation;
 
 #[cfg(test)]
 mod interop_tests;
+#[cfg(test)]
+mod sync_structure_tests;

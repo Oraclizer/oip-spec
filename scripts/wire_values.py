@@ -62,7 +62,7 @@ def validate_result(row,schema):
         if row["retained_binding"] is None:raise ValueError("Accepted wire input has no retained binding")
         octets(row["reencoded_core_hex"],nonempty=True);octets(row["signing_preimage_hex"],nonempty=True)
         typed_tree(row["transport_key_ir"],schema,root_tags={200})
-        typed_tree(row["typed_operand_ir"],schema,root_tags=set(range(10,22)))
+        typed_tree(row["typed_operand_ir"],schema,root_tags=set(range(10,23)))
     elif any(row[field] is not None for field in VALUE_FIELDS):raise ValueError("Refusal cannot carry a fabricated accepted value view")
     return row
 

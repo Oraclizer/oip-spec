@@ -1,6 +1,6 @@
 # OIP v0.6 current and historical observations
 
-This document is part of OIP v0.6.0. [Conformance scope](conformance.md) defines the requirement key words.
+This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines the requirement key words.
 
 ## Current observations
 
@@ -10,6 +10,8 @@ This document is part of OIP v0.6.0. [Conformance scope](conformance.md) defines
 - If the expected cut is stale, authority is unavailable, or permission has changed, the endpoint MUST fail closed. A failed current check cannot authorize an effect. A cached result cannot supply authority for an effect.
 
 - A source balance is the unallocated source pool at the requested domain and asset, including its retained funded allocation distinction. The pool comes from the selected current or historical cut. The Registry owner controls recovery and does not select the account for this read.
+
+- [CurrentCommitment](state-commitment-sync.md#current-observation) reads the selected synchronization entry for one asset and origin domain. Its current read grant and signed cut are checked with that observation.
 
 ## Historical observations
 

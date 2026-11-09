@@ -193,7 +193,7 @@ func EncodeCore(core *wirepb.Core) ([]byte, error) {
 		return nil, ErrFormat
 	}
 	primary, scheme, atomicity, priority := core.GetPrimary(), core.GetSignatureScheme(), core.GetAtomicity(), core.GetPriority()
-	last := [...]uint64{6, 3, 8, 8, 2, 2, 2}
+	last := [...]uint64{7, 3, 8, 9, 2, 2, 2}
 	if primary < 1 || primary > 5 || (scheme != 1 && scheme != 2) || atomicity < 1 || atomicity > 3 ||
 		priority > 4 || (priority == 0 && atomicity != 3) || op.GetOpcode() < 1 || op.GetOpcode() > last[family-1] {
 		return nil, ErrFormat

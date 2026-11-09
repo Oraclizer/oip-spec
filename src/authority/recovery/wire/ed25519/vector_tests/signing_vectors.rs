@@ -265,24 +265,43 @@ fn fixed_reference_signing_inputs_and_source_certificate() {
 #[test]
 fn generated_operation_table_matches_the_actual_reference_filter() {
     use crate::authority::recovery::wire::vector_tests::channel;
-    let security = Ed25519Security::new(config(), key(6), FixedClock(105)).unwrap();
+    let old = include_str!("../../../../../../tests/vectors/v0.6.0/wire-operations.jsonl");
+    let current = include_str!("../../../../../../tests/vectors/wire-operations.jsonl");
     let channel = channel(0);
-    let mut count = 0;
-    for line in include_str!("../../../../../../tests/vectors/wire-operations.jsonl").lines() {
-        let row: Value = serde_json::from_str(line).unwrap();
-        if !row["id"].as_str().unwrap().ends_with("/valid") {
-            continue;
+    for (corpus, legacy, expected) in [(old, true, [31, 25, 26]), (current, false, [33, 28, 28])] {
+        let mut policy = config();
+        policy.sync.accept_sync = !legacy;
+        policy.sync.accept_current = !legacy;
+        let security = Ed25519Security::new(policy, key(6), FixedClock(105)).unwrap();
+        let mut counts = [0; 3];
+        for line in corpus.lines() {
+            let row: Value = serde_json::from_str(line).unwrap();
+            let id = row["id"].as_str().unwrap();
+            if !id.ends_with("/valid") {
+                continue;
+            }
+            if legacy {
+                assert!(!matches!(id, "SyncCommitment/valid" | "CurrentCommitment/valid"));
+            }
+            let bytes = unhex(row["packet_hex"].as_str().unwrap());
+            let packet = decode_packet(&bytes, bytes.len()).unwrap();
+            let actual = security.accepts_operation(&channel, packet.core());
+            let advertised = row["reference_accepts"].as_bool().unwrap();
+            match id {
+                "Write/valid" => {
+                    assert_eq!(advertised, !legacy, "{id}");
+                    assert!(actual, "{id}");
+                }
+                "Timeout/valid" => {
+                    assert!(!advertised, "{id}");
+                    assert!(!actual, "{id}");
+                }
+                _ => assert_eq!(actual, advertised, "{id}"),
+            }
+            counts[0] += 1;
+            counts[1] += usize::from(advertised);
+            counts[2] += usize::from(actual);
         }
-        let bytes = unhex(row["packet_hex"].as_str().unwrap());
-        let packet = decode_packet(&bytes, bytes.len()).unwrap();
-        let actual = security.accepts_operation(&channel, packet.core());
-        assert_eq!(
-            actual,
-            row["reference_accepts"].as_bool().unwrap(),
-            "{}",
-            row["id"]
-        );
-        count += 1;
+        assert_eq!(counts, expected);
     }
-    assert_eq!(count, 31);
 }
