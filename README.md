@@ -8,21 +8,27 @@
 
   [![Tests](https://github.com/Oraclizer/oip-spec/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Oraclizer/oip-spec/actions/workflows/tests.yml)
   [![Repository health](https://github.com/Oraclizer/oip-spec/actions/workflows/repository-health.yml/badge.svg?branch=main)](https://github.com/Oraclizer/oip-spec/actions/workflows/repository-health.yml)
+  [![Formal models](https://img.shields.io/github/actions/workflow/status/Oraclizer/formal-verification/proofs.yml?branch=main&label=formal%20models)](https://github.com/Oraclizer/formal-verification/actions/workflows/proofs.yml)
   [![Rust](https://img.shields.io/badge/rust-1.96.1-b7410e.svg)](https://github.com/Oraclizer/oip-spec/actions/workflows/tests.yml)
   [![Go](https://img.shields.io/badge/go-1.25.5-00add8.svg)](https://github.com/Oraclizer/oip-spec/actions/workflows/tests.yml)
   [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+  [Documentation](https://docs.oraclizer.io/oip-v06/oip-overview/) |
   [Specification](#specification-documents) |
   [Quickstart](#quickstart) |
   [Architecture](#architecture) |
-  [Versions](#versions-and-compatibility) |
+  [Formal verification](#formal-verification) |
   [Assurance](#assurance) |
   [Changelog](CHANGELOG.md)
 </div>
 
 > **Unaudited. Not for production.** OIP v0.6.0 is a prototype-stage
 > specification draft. The Rust and Go code here makes its rules executable
-> and testable. It is reference code without a security audit, and this
+> and testable. Isabelle/HOL proofs cover models of the protocol under stated
+> assumptions, and the required CI check holds the Rust and Go code to models
+> exported from those proofs on fixed and seeded inputs
+> ([Formal verification](#formal-verification)). That is not a proof about
+> every run of the compiled code. The code has had no security audit, and this
 > repository describes no deployment.
 
 ## Why OIP
@@ -72,23 +78,20 @@ cargo +1.96.1 test --locked -- --list --ignored
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    caller["Caller signs a request<br/>version 6 protobuf core, Ed25519 signature"]
-    checks["Receiver checks before any effect<br/>format, version, sender key and scope,<br/>signature, lifetime, duplicates, operands"]
-    refusal["Refusal with a typed code<br/>no state change"]
-    adapters[("Trusted adapters<br/>caller identity, keys,<br/>reference time, storage")]
-    owner["Operation on the service that owns the state<br/>lock, debit, credit, regulatory step, read"]
-    outcome["Recorded outcome<br/>readable again after a timeout or crash"]
-    response["Signed response<br/>bound to the original request"]
-    verify["Caller verifies the response<br/>against the request it kept"]
-    caller --> checks
-    checks -- "a check fails" --> refusal
-    checks -- "all checks pass" --> owner
-    adapters -.-> checks
-    adapters -.-> owner
-    owner --> outcome --> response --> verify
-```
+<div align="center">
+  <picture>
+    <source media="(max-width: 900px)" srcset="docs/assets/architecture-overview-mobile.svg">
+    <img src="docs/assets/architecture-overview.svg" alt="Request path through OIP: a caller signs a version 6 request; Rust and Go receivers run nine ordered checks before any effect and return a typed refusal when one fails; the Rust state owner runs the operation and records the outcome; the caller verifies the signed response against the request it kept" width="900">
+  </picture>
+</div>
+
+Rust and Go apply the nine checks in the order of the
+[transport receive table](spec/wire-conformance.md#transport-receive). The
+Rust reference then admits the request for the state owner, which checks
+caller authority, trusted time and any retained result before the operation
+runs ([persistent request admission](spec/wire-conformance.md#persistent-request-admission)).
+Caller identity, keys, reference time and durable storage come from adapters
+that the deployment supplies; this repository does not verify them.
 
 The schema in [`proto/oip.proto`](proto/oip.proto) generates the Rust
 bindings in `src/wire/generated.rs` and the Go bindings in `go/wirepb/`.
@@ -116,11 +119,68 @@ them.
 | Go | 1.25.5 with `google.golang.org/protobuf` v1.36.8 |
 | Code generation | protoc 33.5 and protoc-gen-go v1.36.8 |
 
-A SINGLE signature uses Ed25519 in the reference profile. A THRESHOLD
+A `SINGLE` signature uses Ed25519 in the reference profile. A `THRESHOLD`
 signature requires a configured adapter that enforces distinct, currently
 authorized signers and a trusted quorum. This repository contains no
 threshold adapter, so the reference refuses threshold requests with
 `INVALID_THRESHOLD_SIGNATURE`.
+
+## Formal verification
+
+<div align="center">
+  <picture>
+    <source media="(max-width: 900px)" srcset="docs/assets/verification-architecture-mobile.svg">
+    <img src="docs/assets/verification-architecture.svg" alt="How this repository connects to the formal models: Isabelle/HOL models, hand-maintained Rust correspondence and exported executable models in Oraclizer/formal-verification; the specification, Rust reference, pinned model files and Go message layer here; and the required CI check that compares the code with the models on 673 transport inputs and 259 response inputs" width="900">
+  </picture>
+</div>
+
+The formal models for OIP live in the
+[`Oracle_Interoperability_Protocol`](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol)
+folder of Oraclizer/formal-verification. They connect to this repository in
+three ways:
+
+- **Proofs about models.** Nine Isabelle/HOL sessions model the product, the
+  reference profile, record reopening, the recovery boundary and the message
+  interfaces. Each theorem holds under the assumptions it names.
+- **Source correspondence.** Named statements relate selected Rust operations
+  to the models. They are maintained by hand; no tool derives them from the
+  compiled code.
+- **Executable comparisons.** Models exported from the checked theories run
+  unedited in CI.
+  [`tests/model-artifact.lock.json`](tests/model-artifact.lock.json) pins each
+  exported file by SHA-256 and Git blob, and the required Tests result check
+  fails unless:
+  - Rust, Go and the typed transport model agree on all seven recorded fields
+    for 673 inputs, 161 fixed and 512 seeded
+    ([wire value comparison](tests/wire-values.md));
+  - Rust and the full response model agree on 259 inputs: 31 original
+    operations, 207 typed results and 21 client inputs
+    ([response comparison](tests/full-response-consumer.md)).
+
+In the other direction,
+[`consumer-binding.json`](https://github.com/Oraclizer/formal-verification/blob/main/Oracle_Interoperability_Protocol/consumer-binding.json)
+in the proof repository lists the exact oip-spec commit and the model pins,
+and its
+[REPRODUCING.md](https://github.com/Oraclizer/formal-verification/blob/main/Oracle_Interoperability_Protocol/REPRODUCING.md)
+explains how to rebuild the sessions and the exports.
+
+The exported models carry a fingerprint of the runtime sources listed in
+[`tests/runtime-source-files.json`](tests/runtime-source-files.json). Changing
+one of those files fails the comparison until a model with the new fingerprint
+is exported and pinned;
+[CONTRIBUTING.md](CONTRIBUTING.md#changes-that-affect-the-pinned-models)
+explains what that means for a pull request. The
+[artifact contract](tests/model-artifact.md) and the
+[pinned Linux recipe](tests/linux-model-runtime.md) give the details.
+
+The required check does not compare financial or internal product state with
+a model; the [source regression interface](tests/reference-execution.md)
+keeps those source observations separate.
+
+The comparisons cover the listed inputs. They are not a proof that every run
+of the compiled Rust or Go code matches the models. The compiler, the
+cryptographic primitives and the identity, source attestation and storage
+providers remain assumptions.
 
 ## Assurance
 
@@ -130,10 +190,11 @@ threshold adapter, so the reference refuses threshold requests with
 | Go tests | `go test -mod=readonly ./...` in `go/` | The Go message layer decodes, checks and refuses the vector frames as specified |
 | Generated bindings | `python3 scripts/generate-wire.py --check` with the pinned generators | The committed Rust and Go bindings are byte-identical to the pinned generators' output |
 | Operation table | `python3 scripts/render-operations.py --check` | [`spec/operations.md`](spec/operations.md) matches its source table |
-| Operation conformance | `python3 scripts/check-operations.py` | Table-derived frames and seeded transport mutations agree between Rust, Go and the independently pinned executable model; missing or stale model inputs fail |
+| Operation conformance | `python3 scripts/check-operations.py` | Table-derived frames and seeded transport mutations (673 inputs) agree between Rust, Go and the independently pinned typed model on all seven recorded fields; missing or stale model inputs fail |
 | Signed interoperation | `python3 scripts/test-wire-interop.py` | Rust and Go exchange signed frames, including execution at the Rust persistent authority |
+| Response comparison | `python3 scripts/check-response-boundary.py` after the source runs in [`tests.yml`](.github/workflows/tests.yml) | Rust's signed responses and client results agree with the pinned full response model on 259 inputs |
 | Repository health | `node .github/scripts/verify-repository-health.mjs` | Links, vector checksums, workflow pins and public-text rules hold |
-| Formal models | [Proof source and scope](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol) | The proof artifact states the model, its assumptions and the implementation boundary |
+| Formal models | [Proof source and scope](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol) | The proof repository's Proofs workflow builds the nine Isabelle/HOL sessions; each theorem holds under the assumptions it names |
 
 A hosted result applies to the commit it ran on. The checks do not
 establish:
@@ -144,7 +205,9 @@ establish:
   contain;
 - the behavior covered by tests that need live services, because CI does not
   run them;
-- a machine-checked link between the Rust or Go code and a formal model;
+- a proof that every run of the compiled Rust or Go code matches the formal
+  models. The model comparisons cover the listed inputs, and the source
+  correspondence covers selected Rust operations and is maintained by hand;
 - any legal or regulatory fact. Regulatory operations carry decisions made
   outside the protocol, and OIP checks and records those decisions.
 
@@ -172,30 +235,10 @@ establish:
 | `src/` | Rust reference: product boundary, message layer, recovery and handover profiles |
 | `examples/wire_corpus.rs` | Prints the signed message corpus used to compare Rust and Go |
 | `go/` | Go message layer: byte checks, admission, operands, the v0.5 compatibility codec and a corpus generator |
-| `tests/vectors/` | Shared test vectors, each with a SHA-256 checksum file |
-| `scripts/` | Binding generation, operation-table rendering and the Rust and Go exchange script |
-| `docs/assets/` | README banner |
+| `tests/` | Shared test vectors with SHA-256 checksum files, the pinned model lock and the contract of each model comparison |
+| `scripts/` | Binding generation, operation-table rendering, the Rust and Go exchange and the model comparisons |
+| `docs/assets/` | README banner, diagrams and social preview |
 | `.github/` | Workflows, the repository health checker, and issue and pull request templates |
-
-## Executable conformance boundaries
-
-The normal [wire value comparison](tests/wire-values.md) requires actual Rust,
-Go and the independently pinned exported model to agree on transport decisions,
-retained bytes, decoded typed values, canonical re-encoding, signing preimages
-and transport keys. The fixed/seeded corpus has 673 inputs. Old accept-only
-exports cannot satisfy its distinct typed-value ABI.
-
-The Rust reference path also checks the original typed product-result,
-preimage and response-byte boundary through the independently pinned Full
-sender/current-client model. Source-only signed-response regressions and
-limited result converter fixtures remain distinct from that model comparison.
-The [full consumer contract](tests/full-response-consumer.md) distinguishes
-model primitive requests, actual signer attempts and scoped source provenance.
-
-Financial/internal product replay consumers remain explicitly separate prepared
-work. See the [artifact contract](tests/model-artifact.md),
-[source regression interface](tests/reference-execution.md) and
-[pinned Linux recipe](tests/linux-model-runtime.md).
 
 ## Security, contributing and support
 
