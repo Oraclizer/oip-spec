@@ -1398,6 +1398,7 @@ Code of a correlated response. Each code fixes its response kind and whether the
 | 26 | LEGAL_EMITTED | 1 RECORDED | present |  |
 | 27 | LEGAL_APPLIED | 1 RECORDED | present |  |
 | 28 | SPEND_EXECUTED | 1 RECORDED | present |  |
+| 29 | STATE_COMMITMENT_SYNCED | 1 RECORDED | present | Commits the authorized stream entry. An exact authorized retry returns the same recorded result. Closest v0.5 outcome is ACK type PROCESSED. |
 | 30 | LEGAL_INVALID_AUTHORITY | 1 RECORDED | absent |  |
 | 31 | LEGAL_INVALID_STATE | 1 RECORDED | absent |  |
 | 32 | LEGAL_INVALID_BINDING | 1 RECORDED | absent |  |
@@ -1407,6 +1408,9 @@ Code of a correlated response. Each code fixes its response kind and whether the
 | 36 | LEGAL_APPEAL_DEADLINE_MISMATCH | 1 RECORDED | absent |  |
 | 37 | LEGAL_MISSING_DESTINATION | 1 RECORDED | absent |  |
 | 38 | LEGAL_CONFLICTING_ORDER | 1 RECORDED | absent |  |
+| 39 | STATE_COMMITMENT_MISMATCH | 1 RECORDED | absent | The mode or predecessor fails its check and consumes the call identifier. Use a fresh signed call after obtaining the current entry. Closest v0.5 outcome is STATE_HASH_MISMATCH. |
+| 40 | STATE_COMMITMENT_STALE | 1 RECORDED | absent | The source position or origin event fails its freshness check and consumes the call identifier. Use fresh source evidence and a fresh signed call. There is no v0.5 equivalent. |
+| 41 | SOURCE_ATTESTATION_REJECTED | 1 RECORDED | absent | The selected source registry or proof fails validation and consumes the call identifier. Correct the evidence and use a fresh signed call. Closest v0.5 outcome is INVALID_DRIVER_ATTESTATION. |
 | 50 | UNRESOLVED | 2 DELIVERY | absent |  |
 | 51 | RESPONSE_LOST | 2 DELIVERY | absent |  |
 | 52 | DEADLINE_EXPIRED | 2 DELIVERY | absent |  |

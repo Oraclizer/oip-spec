@@ -65,6 +65,7 @@ response_codes! {
     LegalEmitted => (1, 26, true),
     LegalApplied => (1, 27, true),
     SpendExecuted => (1, 28, true),
+    StateCommitmentSynced => (1, 29, true),
     LegalInvalidAuthority => (1, 30, false),
     LegalInvalidState => (1, 31, false),
     LegalInvalidBinding => (1, 32, false),
@@ -74,6 +75,9 @@ response_codes! {
     LegalAppealDeadlineMismatch => (1, 36, false),
     LegalMissingDestination => (1, 37, false),
     LegalConflictingOrder => (1, 38, false),
+    StateCommitmentMismatch => (1, 39, false),
+    StateCommitmentStale => (1, 40, false),
+    SourceAttestationRejected => (1, 41, false),
     Unresolved => (2, 50, false),
     ResponseLost => (2, 51, false),
     DeadlineExpired => (2, 52, false),
@@ -92,8 +96,11 @@ response_codes! {
 }
 
 impl ResponseCode {
-    fn matches_call(self, operands: &Operands) -> bool {
+    fn matches_call(self, operands: &Operands, original: &Core) -> bool {
         use ResponseCode::*;
+        if matches!(&original.body, Some(Body::StateSync(op)) if op.opcode == Some(7)) {
+            return self.matches_sync_commitment();
+        }
         match operands {
             Operands::Ordinary { payload, .. } => match self {
                 Reserved => matches!(payload.command, Command::Reserve { .. }),
@@ -132,6 +139,17 @@ impl ResponseCode {
             Operands::Spend { .. } => self == SpendExecuted || self.is_common(),
             _ => false,
         }
+    }
+
+    fn matches_sync_commitment(self) -> bool {
+        self.is_common()
+            || matches!(
+                self,
+                Self::StateCommitmentSynced
+                    | Self::StateCommitmentMismatch
+                    | Self::StateCommitmentStale
+                    | Self::SourceAttestationRejected
+            )
     }
 
     fn is_common(self) -> bool {
@@ -427,7 +445,7 @@ fn validate_response(
     let code = ResponseStatus::decode(kind, code, commit.is_some())?;
     if code
         .known()
-        .is_some_and(|code| !code.matches_call(&expected_operands))
+        .is_some_and(|code| !code.matches_call(&expected_operands, expected.core()))
     {
         return Err(BAD);
     }
@@ -763,3 +781,5 @@ impl<S: WireSecurity, H: AuthenticatedHead> PersistentAuthority<S, H> {
 pub(in crate::authority::recovery::wire) mod source_trace;
 #[cfg(test)]
 mod vector_tests;
+#[cfg(test)]
+mod extension_tests;
