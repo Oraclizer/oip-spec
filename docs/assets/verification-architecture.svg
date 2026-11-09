@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1170" viewBox="0 0 1200 1170" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="oipfv-title oipfv-desc">
+  <title id="oipfv-title">How the code connects to the formal models</title>
+  <desc id="oipfv-desc">Two repositories and the check that joins them. Oraclizer/formal-verification holds nine Isabelle/HOL sessions for the OIP product, reference profile, record reopening, recovery boundary and message interfaces, whose theorems hold under named assumptions; correspondence statements for selected Rust operations, maintained by hand; and executable models exported from the checked theories and used unedited. This repository holds the specification, the Rust reference, the Go message layer and a lock file that pins each exported model by SHA-256 and Git blob. The required Tests result check runs Rust, Go and the typed transport model on 673 inputs, and Rust and the full response model on 259 inputs; any difference fails. Not established: a refinement proof for every compiled Rust or Go run, a security audit, or deployment and production safety.</desc>
+  <defs>
+    <linearGradient id="oipfv-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060b18"/><stop offset=".62" stop-color="#0a1430"/><stop offset="1" stop-color="#0c1a3d"/></linearGradient>
+    <pattern id="oipfv-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#9fb6e0" stroke-width="1" opacity=".035"/></pattern>
+    <linearGradient id="oipfv-rule" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6aa6ff"/><stop offset=".54" stop-color="#c79d58"/><stop offset="1" stop-color="#c79d58" stop-opacity="0"/></linearGradient>
+    <marker id="oipfv-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#6aa6ff"/></marker>
+    <marker id="oipfv-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#e8b660"/></marker>
+    <marker id="oipfv-coral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#e07a66"/></marker>
+    <marker id="oipfv-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#8fa3cf"/></marker>
+    <marker id="oipfv-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#a493ff"/></marker>
+    <marker id="oipfv-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#5ccfb0"/></marker>
+  </defs>
+  <rect width="1200" height="1170" rx="24" fill="url(#oipfv-bg)"/>
+  <rect width="1200" height="1170" rx="24" fill="url(#oipfv-grid)"/>
+  <rect x=".75" y=".75" width="1198.5" height="1168.5" rx="23.5" fill="none" stroke="#1d3159" stroke-width="1.5"/>
+  <text x="40" y="58" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700" fill="#eef3ff">How the code connects to the formal models</text>
+  <text x="40" y="90.3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#a8bde6">Proofs cover models of the protocol. CI holds the Rust and Go code to models exported from those proofs.</text>
+  <rect x="40" y="108" width="360" height="2" rx="1" fill="url(#oipfv-rule)"/>
+  <path d="M392 486.56 L505 486.56" fill="none" stroke="#a493ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 7" marker-end="url(#oipfv-violet)"/>
+  <path d="M392 636.36 L505 636.36" fill="none" stroke="#a493ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-violet)"/>
+  <text x="450" y="474.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#d4ccff">by hand</text>
+  <text x="450" y="604.36" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#d4ccff">pinned</text>
+  <text x="450" y="624.36" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#d4ccff">by hash</text>
+  <path d="M808 486.56 L879 486.56" fill="none" stroke="#5ccfb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-teal)"/>
+  <path d="M808 636.36 L879 636.36" fill="none" stroke="#5ccfb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-teal)"/>
+  <path d="M808 783.32 L879 783.32" fill="none" stroke="#5ccfb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-teal)"/>
+  <rect x="40" y="140" width="370" height="728.38" rx="18" fill="#100d2c" stroke="#5f53b8" stroke-width="1.5" fill-opacity="0.8"/>
+  <circle cx="73" cy="170" r="15" fill="#0d1f45" stroke="#a493ff" stroke-width="1.6"/>
+  <text x="73" y="175.4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#d4ccff">1</text>
+  <text x="100" y="176" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#d4ccff">Oraclizer/formal-verification</text>
+  <text x="58" y="206" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14" fill="#8f86c9">Oracle_Interoperability_Protocol/</text>
+  <rect x="490" y="140" width="336" height="728.38" rx="18" fill="#0a1630" stroke="#22365e" stroke-width="1.5" fill-opacity="0.85"/>
+  <circle cx="523" cy="170" r="15" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="523" y="175.4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#8cc0ff">2</text>
+  <text x="550" y="176" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#8cc0ff">Oraclizer/oip-spec</text>
+  <text x="508" y="206" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#7f93bd">this repository</text>
+  <rect class="card" x="58" y="224" width="334" height="178.66" rx="12" fill="#171338" stroke="#4d43a0" stroke-width="1.3"/>
+  <text x="74" y="258.05" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#d4ccff">Isabelle/HOL models</text>
+  <text x="74" y="284.94" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">Nine sessions: product, reference</text>
+  <text x="74" y="309.08" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">profile, record reopening, recovery</text>
+  <text x="74" y="333.22" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">boundary and messages</text>
+  <text x="74" y="355.94" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a99fe0">Theorems hold under named</text>
+  <text x="74" y="378.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a99fe0">assumptions</text>
+  <rect class="card" x="58" y="420.66" width="334" height="131.8" rx="12" fill="#171338" stroke="#4d43a0" stroke-width="1.3"/>
+  <text x="74" y="454.71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#d4ccff">Source correspondence</text>
+  <text x="74" y="481.6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">Named statements for selected</text>
+  <text x="74" y="505.74" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">Rust operations</text>
+  <text x="74" y="528.46" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a99fe0">maintained by hand</text>
+  <rect class="card" x="58" y="570.46" width="334" height="131.8" rx="12" fill="#171338" stroke="#4d43a0" stroke-width="1.3"/>
+  <text x="74" y="604.51" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#d4ccff">Exported executable models</text>
+  <text x="74" y="631.4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">Generated from the checked</text>
+  <text x="74" y="655.54" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#d3def5">theories and used unedited</text>
+  <text x="74" y="678.26" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a99fe0">typed transport · full response</text>
+  <text x="62" y="749.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15"><tspan font-family="SFMono-Regular,Consolas,Menlo,monospace" fill="#b8aef0">consumer-binding.json</tspan></text>
+  <text x="62" y="770.86" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#7f93bd">lists the exact oip-spec commit</text>
+  <text x="62" y="792.16" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#7f93bd">and the model pins.</text>
+  <rect class="card" x="508" y="224" width="300" height="178.66" rx="12" fill="#0b1834" stroke="#2b4677" stroke-width="1.3"/>
+  <text x="524" y="258.05" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#eef3ff">Specification</text>
+  <text x="524" y="280.68" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14" fill="#8cc0ff">spec/ proto/oip.proto</text>
+  <text x="524" y="303.4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">31 operations, wire version 6</text>
+  <rect class="card" x="508" y="420.66" width="300" height="131.8" rx="12" fill="#0b1834" stroke="#2b4677" stroke-width="1.3"/>
+  <text x="524" y="454.71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#eef3ff">Rust reference</text>
+  <text x="524" y="477.34" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14" fill="#8cc0ff">src/</text>
+  <text x="524" y="500.06" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">request path, recovery and</text>
+  <text x="524" y="522.78" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">handover</text>
+  <rect class="card" x="508" y="570.46" width="300" height="131.8" rx="12" fill="#0b1834" stroke="#2b4677" stroke-width="1.3"/>
+  <text x="524" y="604.51" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#eef3ff">Pinned model files</text>
+  <text x="524" y="627.14" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14" fill="#8cc0ff">tests/model-artifact.lock.json</text>
+  <text x="524" y="649.86" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">SHA-256 and Git blob of each file</text>
+  <rect class="card" x="508" y="720.26" width="300" height="126.12" rx="12" fill="#0b1834" stroke="#2b4677" stroke-width="1.3"/>
+  <text x="524" y="754.31" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700" fill="#eef3ff">Go message layer</text>
+  <text x="524" y="776.94" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="14" fill="#8cc0ff">go/</text>
+  <text x="524" y="799.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">byte checks, admission and</text>
+  <text x="524" y="822.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">operands</text>
+  <rect class="card" x="882" y="140" width="278" height="728.38" rx="18" fill="#081c20" stroke="#5ccfb0" stroke-width="1.6"/>
+  <circle cx="915" cy="170" r="15" fill="#0d1f45" stroke="#5ccfb0" stroke-width="1.6"/>
+  <text x="915" y="175.4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#a6f0dc">3</text>
+  <text x="942" y="176" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700" fill="#a6f0dc">Required CI check</text>
+  <text x="900" y="206" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="15" fill="#5ccfb0">Tests result</text>
+  <text x="900" y="236.72" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">Runs on every pull request</text>
+  <text x="900" y="259.44" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#93a8d4">and push.</text>
+  <text x="900" y="292.16" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">Model files are fetched by their</text>
+  <text x="900" y="314.88" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">pinned Git blob and SHA-256,</text>
+  <text x="900" y="337.6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">then run beside the actual</text>
+  <text x="900" y="360.32" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">Rust and Go code.</text>
+  <text x="900" y="440.8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#a6f0dc">Transport values</text>
+  <text x="900" y="463.52" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">Rust, Go and the typed model</text>
+  <text x="900" y="486.24" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">on 673 inputs, 161 fixed and</text>
+  <text x="900" y="508.96" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">512 seeded. All seven</text>
+  <text x="900" y="531.68" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">recorded fields must match.</text>
+  <text x="900" y="590.6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#a6f0dc">Response boundary</text>
+  <text x="900" y="613.32" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">Rust and the full model on 259</text>
+  <text x="900" y="636.04" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">inputs: 31 operations, 207</text>
+  <text x="900" y="658.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">typed results and 21 client</text>
+  <text x="900" y="681.48" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#d3def5">inputs.</text>
+  <path d="M900 724.26H1142" class="sep" fill="none" stroke="#2f8f7c" stroke-width="1"/>
+  <text x="900" y="750.98" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a6f0dc">A missing pin, a stale model or</text>
+  <text x="900" y="773.7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#a6f0dc">any difference fails the check.</text>
+  <rect class="card" x="40" y="908.38" width="1120" height="188" rx="18" fill="#2a1519" stroke="#e07a66" stroke-width="1.5" stroke-dasharray="7 6" fill-opacity="0.85"/>
+  <text x="62" y="944.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700" fill="#f3b3a6">Not established</text>
+  <rect x="62" y="962.38" width="348" height="64" rx="12" fill="#341a1e" stroke="#a35a4c" stroke-width="1.2"/>
+  <text x="236" y="989.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" text-anchor="middle" fill="#f3b3a6">A refinement proof for every</text>
+  <text x="236" y="1011.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" text-anchor="middle" fill="#f3b3a6">compiled Rust or Go run</text>
+  <rect x="426" y="962.38" width="348" height="64" rx="12" fill="#341a1e" stroke="#a35a4c" stroke-width="1.2"/>
+  <text x="600" y="1000.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" text-anchor="middle" fill="#f3b3a6">An independent security audit</text>
+  <rect x="790" y="962.38" width="348" height="64" rx="12" fill="#341a1e" stroke="#a35a4c" stroke-width="1.2"/>
+  <text x="964" y="989.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" text-anchor="middle" fill="#f3b3a6">Deployment, operations or</text>
+  <text x="964" y="1011.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" text-anchor="middle" fill="#f3b3a6">production safety</text>
+  <text x="62" y="1060.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#e6a99c">Assumed, not proved: the compiler, the cryptographic primitives, and the identity, source attestation and storage providers.</text>
+  <path d="M40 1135.58 L74 1135.58" fill="none" stroke="#a493ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-violet)"/>
+  <text x="86" y="1140.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#93a8d4">exported model, pinned by hash</text>
+  <path d="M349.167 1135.58 L383.167 1135.58" fill="none" stroke="#a493ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 6" marker-end="url(#oipfv-violet)"/>
+  <text x="395.167" y="1140.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#93a8d4">correspondence kept by hand</text>
+  <path d="M640.638 1135.58 L674.638 1135.58" fill="none" stroke="#5ccfb0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipfv-teal)"/>
+  <text x="686.638" y="1140.38" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" fill="#93a8d4">inputs to the required comparison</text>
+</svg>

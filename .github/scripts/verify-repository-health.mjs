@@ -63,6 +63,10 @@ const required = [
   ".github/workflows/tests.yml",
   "docs/assets/oip-spec-banner.svg",
   "docs/assets/oip-spec-banner-mobile.svg",
+  "docs/assets/architecture-overview.svg",
+  "docs/assets/architecture-overview-mobile.svg",
+  "docs/assets/verification-architecture.svg",
+  "docs/assets/verification-architecture-mobile.svg",
   "Cargo.toml",
   "Cargo.lock",
   "go/go.mod",
@@ -316,6 +320,7 @@ for (const marker of [
   "## Quickstart",
   "## Architecture",
   "## Versions and compatibility",
+  "## Formal verification",
   "## Assurance",
   "## Specification documents",
   "## Repository map",
@@ -332,6 +337,31 @@ if (!banner.test(readme)) {
 for (const match of readme.matchAll(/github\.com\/Oraclizer\/oip-spec\/actions\/workflows\/([^/)\s]+)\/badge\.svg(\?[^)\s]*)?/g)) {
   if (!isFile(`.github/workflows/${match[1]}`)) failures.push(`badge names a missing workflow: ${match[1]}`);
   if (match[2] !== "?branch=main") failures.push(`workflow badge must show the main branch: ${match[1]}`);
+}
+// A status badge for a workflow in another repository also shows its main branch.
+for (const match of readme.matchAll(/img\.shields\.io\/github\/actions\/workflow\/status\/[^)\s]+/g)) {
+  if (!/[?&]branch=main(?:&|$)/.test(match[0])) failures.push(`workflow status badge must show the main branch: ${match[0]}`);
+}
+
+// Every README diagram is a <picture>: a 900px mobile source next to its
+// desktop file, with the mobile canvas 600 units wide.
+const diagrams = ["architecture-overview", "verification-architecture"];
+const pictures = [...readme.matchAll(/<picture>[\s\S]*?<\/picture>/g)].map((match) => match[0]);
+for (const block of pictures.filter((entry) => !entry.includes("oip-spec-banner"))) {
+  const pair = /^<picture>\s*<source media="\(max-width: 900px\)" srcset="docs\/assets\/([a-z0-9-]+)-mobile\.svg">\s*<img src="docs\/assets\/\1\.svg" alt="[^"]+" width="\d+">\s*<\/picture>$/.exec(block);
+  if (!pair) {
+    failures.push(`README picture must pair docs/assets/<name>-mobile.svg with docs/assets/<name>.svg: ${block.slice(0, 120)}`);
+    continue;
+  }
+  const mobile = `docs/assets/${pair[1]}-mobile.svg`;
+  if (isFile(mobile) && !/\bviewBox="0 0 600 \d+(?:\.\d+)?"/.test(read(mobile))) {
+    failures.push(`mobile diagram canvas must be 600 units wide: ${mobile}`);
+  }
+}
+for (const name of diagrams) {
+  if (!pictures.some((block) => block.includes(`srcset="docs/assets/${name}-mobile.svg"`))) {
+    failures.push(`README missing the diagram: docs/assets/${name}.svg`);
+  }
 }
 
 for (const path of files.filter((file) => extname(file).toLowerCase() === ".svg")) {

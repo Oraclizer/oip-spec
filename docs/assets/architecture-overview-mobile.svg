@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="2421" viewBox="0 0 600 2421" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="oipflowm-title oipflowm-desc">
+  <title id="oipflowm-title">How a request moves through OIP, mobile layout</title>
+  <desc id="oipflowm-desc">A caller builds a version 6 request and signs it. The receiver, in Rust and in Go, runs nine checks in order before any effect: version profile, frame size and canonical bytes, operation set when configured, version fit and sender scope, lifetime and clock skew, signature, source attestation, operand layout and the duplicate check. Any failure returns a typed refusal and changes nothing. When all checks pass, the Rust reference checks caller authority and trusted time, runs the operation and records the outcome, which stays readable after a timeout or crash so a retry returns it instead of repeating the effect. The signed response is bound to the original request, and the caller verifies it against the request it kept. Caller identity, keys, reference time and durable storage come from trusted adapters supplied by the deployment.</desc>
+  <defs>
+    <linearGradient id="oipflowm-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060b18"/><stop offset=".62" stop-color="#0a1430"/><stop offset="1" stop-color="#0c1a3d"/></linearGradient>
+    <pattern id="oipflowm-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#9fb6e0" stroke-width="1" opacity=".035"/></pattern>
+    <linearGradient id="oipflowm-rule" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6aa6ff"/><stop offset=".54" stop-color="#c79d58"/><stop offset="1" stop-color="#c79d58" stop-opacity="0"/></linearGradient>
+    <marker id="oipflowm-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#6aa6ff"/></marker>
+    <marker id="oipflowm-gold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#e8b660"/></marker>
+    <marker id="oipflowm-coral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#e07a66"/></marker>
+    <marker id="oipflowm-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#8fa3cf"/></marker>
+    <marker id="oipflowm-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#a493ff"/></marker>
+    <marker id="oipflowm-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1.2 9 5 0 8.8Z" fill="#5ccfb0"/></marker>
+  </defs>
+  <rect width="600" height="2421" rx="24" fill="url(#oipflowm-bg)"/>
+  <rect width="600" height="2421" rx="24" fill="url(#oipflowm-grid)"/>
+  <rect x=".75" y=".75" width="598.5" height="2419.5" rx="23.5" fill="none" stroke="#1d3159" stroke-width="1.5"/>
+  <text x="24" y="52" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700" fill="#eef3ff">How a request moves</text>
+  <text x="24" y="91" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700" fill="#eef3ff">through OIP</text>
+  <text x="24" y="127.1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#a8bde6">Every check runs before any state changes.</text>
+  <text x="24" y="154.65" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#a8bde6">A refused request changes nothing.</text>
+  <rect x="24" y="174.55" width="300" height="2" rx="1" fill="url(#oipflowm-rule)"/>
+  <rect class="card" x="24" y="212.2" width="552" height="250.8" rx="18" fill="#0b1834" stroke="#2b4677" stroke-width="1.6"/>
+  <circle cx="65" cy="253.2" r="17" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="65" y="259.32" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle" fill="#8cc0ff">1</text>
+  <text x="94" y="261.84" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700" fill="#eef3ff">Caller</text>
+  <text x="48" y="308.02" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Builds a request and signs it</text>
+  <rect class="card" x="48" y="326.02" width="320" height="82" rx="12" fill="#17140b" stroke="#c79d58" stroke-width="1.4"/>
+  <text x="62" y="353.02" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" fill="#f6cf86">signature envelope</text>
+  <rect class="card" x="62" y="364.02" width="292" height="34" rx="8" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="208" y="386.78" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#8cc0ff">version 6 core</text>
+  <text x="48" y="437" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#93a8d4">Ed25519 in the reference profile</text>
+  <path d="M300 463 L300 538" fill="none" stroke="#6aa6ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-blue)"/>
+  <text x="316" y="509" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#8cc0ff">signed request</text>
+  <rect class="card" x="24" y="541" width="552" height="566" rx="18" fill="#0b1834" stroke="#3a62a8" stroke-width="1.8"/>
+  <circle cx="65" cy="582" r="17" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="65" y="588.12" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle" fill="#8cc0ff">2</text>
+  <text x="94" y="590.64" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700" fill="#eef3ff">Receiver checks</text>
+  <rect x="419.873" y="566.5" width="132.127" height="31" rx="15.5" fill="#10244c" stroke="#2f5596" stroke-width="1.2"/>
+  <text x="485.936" y="588.12" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" text-anchor="middle" fill="#8cc0ff">Rust and Go</text>
+  <text x="48" y="629" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#93a8d4">In this order, before any effect</text>
+  <path class="track" d="M61 666V1002" fill="none" stroke="#6aa6ff" stroke-width="2" opacity=".28"/>
+  <rect x="48" y="653" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="671.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">1</text>
+  <text x="88" y="673.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Version profile</text>
+  <rect x="48" y="695" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="713.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">2</text>
+  <text x="88" y="715.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Frame size and canonical bytes</text>
+  <rect x="48" y="737" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="755.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">3</text>
+  <text x="88" y="757.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Operation set, when configured</text>
+  <rect x="48" y="779" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="797.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">4</text>
+  <text x="88" y="799.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Version fit and sender scope</text>
+  <rect x="48" y="821" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="839.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">5</text>
+  <text x="88" y="841.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Lifetime and clock skew</text>
+  <rect x="48" y="863" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="881.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">6</text>
+  <text x="88" y="883.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Signature</text>
+  <rect x="48" y="905" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="923.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">7</text>
+  <text x="88" y="925.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Source attestation</text>
+  <rect x="48" y="947" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="965.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">8</text>
+  <text x="88" y="967.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Operand layout</text>
+  <rect x="48" y="989" width="26" height="26" rx="7" fill="#0e2350" stroke="#3d6bb3" stroke-width="1.2"/>
+  <text x="61" y="1007.76" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#8cc0ff">9</text>
+  <text x="88" y="1009.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Duplicate check</text>
+  <text x="88" y="1032.96" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">same bytes get the earlier result</text>
+  <path d="M48 1061H552" class="sep" fill="none" stroke="#2b4677" stroke-width="1"/>
+  <text x="48" y="1089" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17"><tspan font-family="Inter,Segoe UI,Arial,sans-serif" fill="#7f93bd">Full rules: </tspan><tspan font-family="SFMono-Regular,Consolas,Menlo,monospace" fill="#8cc0ff">spec/wire-conformance.md</tspan></text>
+  <path d="M150 1107 L150 1372.68" fill="none" stroke="#6aa6ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-blue)"/>
+  <text x="166" y="1147" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#8cc0ff">all nine</text>
+  <text x="166" y="1173" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#8cc0ff">pass</text>
+  <path d="M344 1107 L344 1162" fill="none" stroke="#e07a66" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-coral)"/>
+  <text x="360" y="1144" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="600" fill="#f3b3a6">a check fails</text>
+  <rect class="card" x="300" y="1165" width="276" height="148.68" rx="16" fill="#2a1519" stroke="#e07a66" stroke-width="1.6"/>
+  <text x="320" y="1201" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700" fill="#f3b3a6">Typed refusal</text>
+  <text x="320" y="1234.56" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#e6a99c">Nothing changes, and</text>
+  <text x="320" y="1260.12" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#e6a99c">each code has a stated</text>
+  <text x="320" y="1285.68" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#e6a99c">retry rule.</text>
+  <rect class="card" x="24" y="1375.68" width="552" height="178.62" rx="18" fill="#0b1834" stroke="#2b4677" stroke-width="1.6"/>
+  <circle cx="65" cy="1416.68" r="17" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="65" y="1422.8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle" fill="#8cc0ff">3</text>
+  <text x="94" y="1425.32" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700" fill="#eef3ff">State owner</text>
+  <rect x="400.617" y="1401.18" width="151.383" height="31" rx="15.5" fill="#10244c" stroke="#2f5596" stroke-width="1.2"/>
+  <text x="476.308" y="1422.8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" text-anchor="middle" fill="#8cc0ff">Rust reference</text>
+  <text x="48" y="1471.5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Checks caller authority and trusted time, then</text>
+  <text x="48" y="1501.32" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">runs the operation:</text>
+  <text x="48" y="1528.3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#8cc0ff">lock, debit, credit, regulatory step or read</text>
+  <path d="M300 1554.3 L300 1609.3" fill="none" stroke="#6aa6ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-blue)"/>
+  <rect class="card" x="24" y="1612.3" width="552" height="175.78" rx="18" fill="#0b1834" stroke="#2b4677" stroke-width="1.6"/>
+  <circle cx="65" cy="1653.3" r="17" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="65" y="1659.42" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle" fill="#8cc0ff">4</text>
+  <text x="94" y="1661.94" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700" fill="#eef3ff">Recorded outcome</text>
+  <rect x="400.617" y="1637.8" width="151.383" height="31" rx="15.5" fill="#10244c" stroke="#2f5596" stroke-width="1.2"/>
+  <text x="476.308" y="1659.42" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" text-anchor="middle" fill="#8cc0ff">Rust reference</text>
+  <text x="48" y="1708.12" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Readable again after a timeout or crash.</text>
+  <text x="48" y="1735.1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#93a8d4">A retry returns this result</text>
+  <text x="48" y="1762.08" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#93a8d4">and does not repeat the effect.</text>
+  <path d="M300 1788.08 L300 1881.08" fill="none" stroke="#e8b660" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-gold)"/>
+  <text x="316" y="1832.08" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#f6cf86">signed response, bound</text>
+  <text x="316" y="1858.08" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#f6cf86">to the original request</text>
+  <rect class="card" x="24" y="1884.08" width="552" height="151.64" rx="18" fill="#0b1834" stroke="#2b4677" stroke-width="1.6"/>
+  <circle cx="65" cy="1925.08" r="17" fill="#0d1f45" stroke="#6aa6ff" stroke-width="1.6"/>
+  <text x="65" y="1931.2" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle" fill="#8cc0ff">5</text>
+  <text x="94" y="1933.72" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700" fill="#eef3ff">Caller verifies</text>
+  <text x="48" y="1979.9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">Checks the signed response</text>
+  <text x="48" y="2009.72" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" fill="#d3def5">against the request it kept</text>
+  <rect class="card" x="24" y="2075.72" width="552" height="154.94" rx="18" fill="#0b1630" stroke="#8fa3cf" stroke-width="1.6" stroke-dasharray="6 6" fill-opacity="0.75"/>
+  <text x="48" y="2113.72" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="700" fill="#b9c7e6">Trusted adapters</text>
+  <text x="48" y="2148.7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#b9c7e6">Supplied by the deployment: caller identity, keys,</text>
+  <text x="48" y="2175.68" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#b9c7e6">reference time and durable storage. The checks, the</text>
+  <text x="48" y="2202.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#b9c7e6">operation and the record rely on them.</text>
+  <path d="M28 2274.9 L68 2274.9" fill="none" stroke="#6aa6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-blue)"/>
+  <text x="80" y="2280.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">request path</text>
+  <path d="M28 2308.9 L68 2308.9" fill="none" stroke="#e8b660" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-gold)"/>
+  <text x="80" y="2314.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">signed response</text>
+  <path d="M28 2342.9 L68 2342.9" fill="none" stroke="#e07a66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#oipflowm-coral)"/>
+  <text x="80" y="2348.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">refusal, no state change</text>
+  <path d="M28 2376.9 L68 2376.9" fill="none" stroke="#8fa3cf" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 6" marker-end="url(#oipflowm-slate)"/>
+  <text x="80" y="2382.66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">trusted input from the deployment</text>
+</svg>

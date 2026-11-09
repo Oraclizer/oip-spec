@@ -112,6 +112,22 @@ downloads dependencies.
   format. Tests and checksums refer to existing files by name, so new cases
   go in a new file with its own checksum.
 
+## Changes that affect the pinned models
+
+The required model comparisons run models exported from the
+[proof repository](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol)
+next to the code. Each export carries a fingerprint of the runtime sources
+listed in [`tests/runtime-source-files.json`](tests/runtime-source-files.json):
+every file in `src/`, `examples/` and `go/`, the Python modules in `scripts/`,
+and named files that include the Cargo manifests, `proto/oip.proto`,
+`spec/operations.json`, the comparison inputs in `tests/` and the pinned
+Poly/ML package in `tools/`. A pull request that changes one of these files,
+including a Rust or Go dependency update, fails the Tests result check until a
+model with the new fingerprint is exported and pinned in
+`tests/model-artifact.lock.json`. Say in the pull request that the change
+needs a new export. Documentation and other files outside the list do not
+affect the models.
+
 ## Commit and branch conventions
 
 Write commit subjects in the imperative mood, in English, under 72
