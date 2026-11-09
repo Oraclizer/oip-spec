@@ -8,8 +8,9 @@ The pinned public namespace, model content and source fingerprint are checked
 independently. A passing corpus comparison is bounded conformance evidence;
 it does not establish general implementation refinement.
 
-The fixed corpus remains 161 fixed plus 512 seeded transport inputs. Each
-implementation independently reports:
+The v0.6.1 corpus includes 180 fixed and 512 seeded transport inputs. The
+[v0.6.0 corpus](vectors/v0.6.0/wire-operations.jsonl) is preserved separately.
+Each implementation reports the following fields for each input identifier.
 
 | Field | Meaning |
 | --- | --- |

@@ -13,6 +13,11 @@ as packages.
 - `SyncCommitment` and `CurrentCommitment`, with binary source attestations, current roster verification and independent source record selection.
 - Reference admission and execution for the existing `Write` operation and DATA_UPDATED result.
 
+### Compatibility
+
+- A v0.6.0 receiver refuses the new STATE_SYNC/7 and QUERY/9 opcodes with INVALID_FORMAT. A v0.6.1 receiver decodes them and uses its configured operation set. It returns UNSUPPORTED_VERSION before source or signature checks when the operation is disabled.
+- The reference now admits the existing LOCK_MANAGEMENT/7 Write layout. The [v0.6.0 transport corpus](tests/vectors/v0.6.0/wire-operations.jsonl) retains the original opcode and acceptance expectations.
+
 ### Fixed
 
 - Generic mutable entry points now enforce the selected ordered maintenance boundary.

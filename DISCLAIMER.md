@@ -18,8 +18,8 @@ reach the same decisions on the vector frames.
 The hosted runs also compare the code with formal models. Rust, Go and a
 typed transport model exported from the Isabelle/HOL theories in
 [Oraclizer/formal-verification](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol)
-agree on 673 transport inputs, and Rust and the exported full response model
-agree on 259 response inputs. The model files are pinned by SHA-256 and Git
+agree on 692 transport inputs, and Rust and the exported full response model
+agree on 261 response inputs. The model files are pinned by SHA-256 and Git
 blob. The theorems about those models hold under the assumptions they name;
 the [README](README.md#formal-verification) describes how the two
 repositories connect.

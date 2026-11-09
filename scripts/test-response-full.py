@@ -1,7 +1,10 @@
 """Pure full-ABI/broker contracts; fake RPC is never actual model evidence."""
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
+import runpy
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from response_full import *
@@ -95,5 +98,58 @@ class BrokerContracts(unittest.TestCase):
         path=Path(__file__).resolve().parent.parent/"tests/wire-response-artifact.lock.json"
         lock=json.loads(path.read_text(encoding="utf-8"));lock.update(binding_status="bound",abi="intinf-response-result-v1")
         with patch.object(Path,"read_text",return_value=json.dumps(lock)),self.assertRaisesRegex(ValueError,"identity"):read_lock(path)
+
+
+class SourceReceiptContracts(unittest.TestCase):
+    def test_original_operation_row_is_bound_to_the_packet_body(self):
+        checker = runpy.run_path(str(Path(__file__).with_name("check-response-boundary.py")))
+        check = checker["check_operation_fixtures"]
+        operations = [{"family": 1, "opcode": 7, "reference_accepts": True, "call": True}]
+        row = {"id": "operation-1-7", "family": 1, "opcode": 7, "branch_class": "caller",
+               "raw_original_packet_hex": "0a0760018201020807"}
+        self.assertEqual(check([row], operations)["caller"], 1)
+        replaced = {**row, "raw_original_packet_hex": "0a0760018201020801"}
+        with self.assertRaisesRegex(MetadataError, "packet and table identity"):
+            check([replaced], operations)
+
+    def test_source_receipt_requires_complete_pinned_streams(self):
+        checker = runpy.run_path(str(Path(__file__).with_name("check-response-boundary.py")))
+        check = checker["checked_source_files"]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            streams = {
+                "source/original-operations/client-contexts.jsonl",
+                "source/original-operations/client-inputs.jsonl",
+                "source/original-operations/inputs.jsonl",
+                "source/original-operations/observations.jsonl",
+                "source/original-operations/scope.json",
+                "source/client-values/inputs.jsonl",
+                "source/client-values/observations.jsonl",
+                "source/client-values/scope.json",
+            }
+            raw = b"{}\n"
+            pin = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+            for name in streams:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
+            receipt = {
+                "schema": "oip-full-wire-source-receipt-v1",
+                "status": "source-operation-and-client-fixtures-pass",
+                "runtime_source_hash": "fixture", "scope": {}, "files": dict.fromkeys(streams, pin),
+            }
+            path = root / "source-receipt.json"
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            _, _, verified = check(root, "fixture")
+            self.assertEqual(verified, dict.fromkeys(streams, raw))
+
+            omitted = "source/original-operations/observations.jsonl"
+            (root / omitted).write_bytes(b"[]\n")
+            with self.assertRaisesRegex(MetadataError, "differs from its actual receipt"):
+                check(root, "fixture")
+            for files in ({}, {name: pin for name in streams - {omitted}}, {**receipt["files"], "../unexpected": pin}):
+                with self.subTest(files=files), self.assertRaisesRegex(MetadataError, "file set"):
+                    path.write_text(json.dumps({**receipt, "files": files}), encoding="utf-8")
+                    check(root, "fixture")
 
 if __name__=="__main__":unittest.main()

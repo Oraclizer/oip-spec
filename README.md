@@ -109,8 +109,9 @@ operation is in [`spec/operations.md`](spec/operations.md).
 | v0.5 | [OIP v0.5 documentation](https://docs.oraclizer.io/oip-v05/oip-overview/) | Used only with an authenticated, permitted legacy peer and an explicitly configured codec for the common Query and Heartbeat operations. The codec is a reference compatibility record and does not interoperate with the wire format in the published v0.5 documentation |
 | Any other version | | Refused with `UNSUPPORTED_VERSION`. Parse, signature, timeout and rejection errors never select another version |
 
-The Ed25519 reference configuration accepts 28 of the 33 operations and
-refuses the other five with `UNSUPPORTED_VERSION` before admission. The
+The Ed25519 reference configuration accepts 28 of the 33 operations when both
+commitment operations are enabled. A known operation excluded by the selected
+configuration receives `UNSUPPORTED_VERSION` before admission. The
 [reference configuration](spec/operations.md#reference-configuration) lists
 them.
 
@@ -131,7 +132,7 @@ threshold adapter, so the reference refuses threshold requests with
 <div align="center">
   <picture>
     <source media="(max-width: 900px)" srcset="docs/assets/verification-architecture-mobile.svg">
-    <img src="docs/assets/verification-architecture.svg" alt="How this repository connects to the formal models: Isabelle/HOL models, hand-maintained Rust correspondence and exported executable models in Oraclizer/formal-verification; the specification, Rust reference, pinned model files and Go message layer here; and the required CI check that compares the code with the models on 673 transport inputs and 259 response inputs" width="900">
+    <img src="docs/assets/verification-architecture.svg" alt="Isabelle/HOL theories, Rust source correspondence and exported models in Oraclizer/formal-verification connect to the specification and implementations here. The required CI check compares 692 transport inputs and 261 response inputs." width="900">
   </picture>
 </div>
 
@@ -140,9 +141,10 @@ The formal models for OIP live in the
 folder of Oraclizer/formal-verification. They connect to this repository in
 three ways:
 
-- **Proofs about models.** Nine Isabelle/HOL sessions model the product, the
+- **Proofs about models.** Isabelle/HOL sessions model the product, the
   reference profile, record reopening, the recovery boundary and the message
-  interfaces. Each theorem holds under the assumptions it names.
+  interfaces. The v0.6.1 extension sessions add synchronization, Write and
+  their executable interfaces. Each theorem holds under the assumptions it names.
 - **Source correspondence.** Named statements relate selected Rust operations
   to the models. They are maintained by hand; no tool derives them from the
   compiled code.
@@ -152,9 +154,9 @@ three ways:
   exported file by SHA-256 and Git blob, and the required Tests result check
   fails unless:
   - Rust, Go and the typed transport model agree on all seven recorded fields
-    for 673 inputs, 161 fixed and 512 seeded
+    for 692 inputs, 180 fixed and 512 seeded
     ([wire value comparison](tests/wire-values.md));
-  - Rust and the full response model agree on 259 inputs: 31 original
+  - Rust and the full response model agree on 261 inputs: 33 original
     operations, 207 typed results and 21 client inputs
     ([response comparison](tests/full-response-consumer.md)).
 
@@ -191,11 +193,11 @@ providers remain assumptions.
 | Go tests | `go test -mod=readonly ./...` in `go/` | The Go message layer decodes, checks and refuses the vector frames as specified |
 | Generated bindings | `python3 scripts/generate-wire.py --check` with the pinned generators | The committed Rust and Go bindings are byte-identical to the pinned generators' output |
 | Operation table | `python3 scripts/render-operations.py --check` | [`spec/operations.md`](spec/operations.md) matches its source table |
-| Operation conformance | `python3 scripts/check-operations.py` | Table-derived frames and seeded transport mutations (673 inputs) agree between Rust, Go and the independently pinned typed model on all seven recorded fields; missing or stale model inputs fail |
+| Operation conformance | `python3 scripts/check-operations.py` | Rust, Go and the pinned typed model agree on all seven recorded fields across 692 inputs. Missing or stale model inputs fail the check. |
 | Signed interoperation | `python3 scripts/test-wire-interop.py` | Rust and Go exchange signed frames, including execution at the Rust persistent authority |
-| Response comparison | `python3 scripts/check-response-boundary.py` after the source runs in [`tests.yml`](.github/workflows/tests.yml) | Rust's signed responses and client results agree with the pinned full response model on 259 inputs |
+| Response comparison | `python3 scripts/check-response-boundary.py` after the source runs in [`tests.yml`](.github/workflows/tests.yml) | Rust's signed responses and client results agree with the pinned full response model on 261 inputs |
 | Repository health | `node .github/scripts/verify-repository-health.mjs` | Links, vector checksums, workflow pins and public-text rules hold |
-| Formal models | [Proof source and scope](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol) | The proof repository's Proofs workflow builds the nine Isabelle/HOL sessions; each theorem holds under the assumptions it names |
+| Formal models | [Proof source and scope](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol) | The proof repository lists the Isabelle/HOL sessions and each theorem's assumptions. |
 
 A hosted result applies to the commit it ran on. The checks do not
 establish:

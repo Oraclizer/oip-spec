@@ -15,17 +15,119 @@ from wire_model_artifact import runtime_source_hash,load_artifact
 
 ROOT=Path(__file__).resolve().parent.parent
 sha=lambda path:hashlib.sha256(Path(path).read_bytes()).hexdigest()
-def read_rows(path):return [json.loads(line) for line in Path(path).read_bytes().splitlines()]
+ORIGINAL = "source/original-operations"
+CURRENT = "source/client-values"
+SOURCE_FILES = {
+    f"{ORIGINAL}/client-contexts.jsonl",
+    f"{ORIGINAL}/client-inputs.jsonl",
+    f"{ORIGINAL}/inputs.jsonl",
+    f"{ORIGINAL}/observations.jsonl",
+    f"{ORIGINAL}/scope.json",
+    f"{CURRENT}/inputs.jsonl",
+    f"{CURRENT}/observations.jsonl",
+    f"{CURRENT}/scope.json",
+}
+
+
+def parse_rows(contents):
+    return [json.loads(line) for line in contents.splitlines()]
+
+
 def paired(inputs,observed):
     if [row["id"] for row in inputs]!=[row["id"] for row in observed] or len({row["id"] for row in inputs})!=len(inputs):raise MetadataError("Source input/output identities are missing/duplicated/reordered")
     return zip(inputs,observed,strict=True)
-def checked_source_files(out,fp):
-    receipt=json.loads((out/"source-receipt.json").read_text(encoding="utf-8"))
-    if receipt["status"]!="source-operation-and-client-fixtures-pass" or receipt["runtime_source_hash"]!=fp:raise MetadataError("Fresh exact source operation/client receipt required")
-    for name,pin in receipt["files"].items():
-        path=out/name
-        if path.stat().st_size!=pin["bytes"] or sha(path)!=pin["sha256"]:raise MetadataError("Source observation differs from its actual receipt")
-    return receipt
+def checked_source_files(out, fp):
+    receipt_bytes = (out / "source-receipt.json").read_bytes()
+    receipt = json.loads(receipt_bytes)
+    if (not isinstance(receipt, dict)
+            or receipt.get("schema") != "oip-full-wire-source-receipt-v1"
+            or receipt.get("status") != "source-operation-and-client-fixtures-pass"
+            or receipt.get("runtime_source_hash") != fp):
+        raise MetadataError("Fresh exact source operation/client receipt required")
+    pins = receipt.get("files")
+    if not isinstance(pins, dict) or set(pins) != SOURCE_FILES:
+        raise MetadataError("Source receipt file set must match the complete fixture streams")
+    streams = {}
+    for name, pin in pins.items():
+        if not isinstance(pin, dict) or set(pin) != {"bytes", "sha256"} or type(pin["bytes"]) is not int:
+            raise MetadataError(f"Invalid source receipt pin for {name}")
+        contents = (out / name).read_bytes()
+        if len(contents) != pin["bytes"] or hashlib.sha256(contents).hexdigest() != pin["sha256"]:
+            raise MetadataError(f"Source observation differs from its actual receipt: {name}")
+        streams[name] = contents
+    if json.loads(streams[f"{ORIGINAL}/scope.json"]) != receipt.get("scope"):
+        raise MetadataError("Source receipt scope differs from the pinned fixture scope")
+    return receipt, hashlib.sha256(receipt_bytes).hexdigest(), streams
+
+
+def fixture_varint(data, offset):
+    value = 0
+    for shift in range(0, 70, 7):
+        if offset >= len(data):
+            break
+        octet = data[offset]
+        offset += 1
+        if shift == 63 and octet > 1:
+            break
+        value |= (octet & 127) << shift
+        if octet < 128:
+            return value, offset
+    raise MetadataError("Truncated or out-of-range operation fixture varint")
+
+
+def fixture_field(data, expected_tag, expected_kind):
+    """Read one fixture identity field. Protocol admission runs separately."""
+    matching = []
+    offset = 0
+    while offset < len(data):
+        key, offset = fixture_varint(data, offset)
+        tag, kind = key >> 3, key & 7
+        if kind == 0:
+            value, offset = fixture_varint(data, offset)
+        elif kind in (1, 2):
+            size, offset = (8, offset) if kind == 1 else fixture_varint(data, offset)
+            end = offset + size
+            if end > len(data):
+                raise MetadataError("Truncated operation fixture field")
+            value = data[offset:end]
+            offset = end
+        else:
+            raise MetadataError("Unexpected operation fixture wire type")
+        if tag == expected_tag:
+            if kind != expected_kind:
+                raise MetadataError("Unexpected operation fixture identity field type")
+            matching.append(value)
+    if len(matching) != 1:
+        raise MetadataError("Missing or ambiguous operation fixture identity field")
+    return matching[0]
+
+
+def check_operation_fixtures(rows, operations):
+    expected = {}
+    for operation in operations:
+        family, opcode = operation["family"], operation["opcode"]
+        if not operation["reference_accepts"]:
+            branch = "configured-refusal"
+        else:
+            branch = "caller" if operation["call"] else "noncaller"
+        expected[f"operation-{family}-{opcode}"] = family, opcode, branch
+    if [row["id"] for row in rows] != list(expected):
+        raise MetadataError("Original operation fixtures differ from the operation table")
+    classes = dict.fromkeys(("caller", "noncaller", "configured-refusal"), 0)
+    for row in rows:
+        family, opcode, branch = expected[row["id"]]
+        packet = bytes.fromhex(row["raw_original_packet_hex"])
+        core = fixture_field(packet, 1, 2)
+        actual_family = fixture_field(core, 12, 0)
+        body = fixture_field(core, 15 + actual_family, 2)
+        actual_opcode = fixture_field(body, 1, 0)
+        if ((row["family"], row["opcode"], row["branch_class"]) != (family, opcode, branch)
+                or (actual_family, actual_opcode) != (family, opcode)):
+            raise MetadataError(f"Original operation fixture does not match its packet and table identity: {row['id']}")
+        classes[branch] += 1
+    return classes
+
+
 def check_missing_record(model,result,kind):
     transcript=result["transcript"];tables=transcript.rows()
     chosen=next((index for index,rows in enumerate(tables) if rows),None)
@@ -56,18 +158,27 @@ def main():
     lock,members=read_lock(ROOT/"tests/wire-response-artifact.lock.json")
     if lock["runtime_source_hash"]!=fp:raise MetadataError("Full current source fingerprint changed")
     identity=IDENTITY+[fp]
-    source_receipt=checked_source_files(args.operations_output,fp)
-    boundary_receipt=json.loads((args.source_output/"source-receipt.json").read_text(encoding="utf-8"))
+    source_receipt, source_receipt_hash, source_streams = checked_source_files(args.operations_output, fp)
+    boundary_receipt_bytes = (args.source_output / "source-receipt.json").read_bytes()
+    boundary_receipt = json.loads(boundary_receipt_bytes)
     if boundary_receipt["status"]!="source-enum-converter-only-pass" or boundary_receipt["runtime_source_hash"]!=fp:raise MetadataError("Actual207 same-source receipt required")
     folder=args.source_output/"source/result-converter"
-    if sha(folder/"egress-inputs.jsonl")!=boundary_receipt["egress_inputs_sha256"] or sha(folder/"egress-observations.jsonl")!=boundary_receipt["egress_observations_sha256"]:raise MetadataError("Actual encoder streams changed")
-    boundary_inputs=read_rows(folder/"egress-inputs.jsonl");boundary_observed=read_rows(folder/"egress-observations.jsonl")
-    original=args.operations_output/"source/original-operations"
-    operation_inputs=read_rows(original/"inputs.jsonl");operation_observed=read_rows(original/"observations.jsonl")
-    current_inputs=read_rows(args.operations_output/"source/client-values/inputs.jsonl");current_observed=read_rows(args.operations_output/"source/client-values/observations.jsonl")
-    contexts={row["id"]:row for row in read_rows(original/"client-contexts.jsonl")}
+    boundary_streams = {}
+    for name in ("inputs", "observations"):
+        contents = (folder / f"egress-{name}.jsonl").read_bytes()
+        if hashlib.sha256(contents).hexdigest() != boundary_receipt[f"egress_{name}_sha256"]:
+            raise MetadataError(f"Actual encoder {name} stream changed")
+        boundary_streams[name] = parse_rows(contents)
+    boundary_inputs = boundary_streams["inputs"]
+    boundary_observed = boundary_streams["observations"]
+    operation_inputs = parse_rows(source_streams[f"{ORIGINAL}/inputs.jsonl"])
+    operation_observed = parse_rows(source_streams[f"{ORIGINAL}/observations.jsonl"])
+    current_inputs = parse_rows(source_streams[f"{CURRENT}/inputs.jsonl"])
+    current_observed = parse_rows(source_streams[f"{CURRENT}/observations.jsonl"])
+    contexts = {row["id"]: row for row in parse_rows(source_streams[f"{ORIGINAL}/client-contexts.jsonl"])}
     if len(boundary_inputs)!=207 or len(operation_inputs)!=33 or len(current_inputs)!=21:raise MetadataError("Declared original/lower/current case coverage changed")
-    classes={name:sum(row["branch_class"]==name for row in operation_inputs) for name in ["caller","noncaller","configured-refusal"]}
+    operations = json.loads((ROOT / "spec/operations.json").read_bytes())["operations"]
+    classes = check_operation_fixtures(operation_inputs, operations)
     if list(classes.values())!=[17,11,5]:raise MetadataError("Original operation branch partition changed")
     for row in boundary_inputs:sender_input(row,"boundary")
     for row in operation_inputs:sender_input(row,"full")
@@ -126,8 +237,8 @@ def main():
         if provider is not None:provider.close()
     differences=sum(bool(case["differences"]) for case in cases)
     receipt={"schema":"oip-full-response-comparison-v1","status":"scoped-full-wire-comparison-pass" if not differences else "wire-response-model-mismatch",
-        "runtime_source_hash":fp,"identity":identity,"source_receipt_sha256":sha(args.operations_output/"source-receipt.json"),
-        "boundary_receipt_sha256":sha(args.source_output/"source-receipt.json"),"model_sha256":members["model"]["sha256"],"driver_sha256":members["driver"]["sha256"],
+        "runtime_source_hash":fp,"identity":identity,"source_receipt_sha256":source_receipt_hash,
+        "boundary_receipt_sha256":hashlib.sha256(boundary_receipt_bytes).hexdigest(),"model_sha256":members["model"]["sha256"],"driver_sha256":members["driver"]["sha256"],
         "primitive_provider_sha256":sha(primitive),"missing_record_control":negative,"case_count":len(cases),"differences":differences,"cases":cases,
         "source_observed_sender_answers_used_as_model_input":False,"original_operation_partition":classes,"typed_boundary_cases":207,"current_client_cases":21,
         "actual_submit_wait":True,"production_worker_start_executed":False,"mirrored_worker_identity_source_scope":source_receipt["scope"],
