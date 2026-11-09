@@ -128,6 +128,13 @@ model with the new fingerprint is exported and pinned in
 needs a new export. Documentation and other files outside the list do not
 affect the models.
 
+For the same reason, Dependabot opens pull requests for Rust and Go
+dependencies only for security updates
+([`.github/dependabot.yml`](.github/dependabot.yml)). Such a pull request
+still changes a fingerprinted file, so it is merged together with a new model
+export. Updates to the actions that the workflows use are outside the list
+and arrive weekly.
+
 ## Commit and branch conventions
 
 Write commit subjects in the imperative mood, in English, under 72
