@@ -461,12 +461,30 @@ for (const path of workflows) {
 if (isFile(".github/dependabot.yml")) {
   const dependabot = read(".github/dependabot.yml");
   if (/^\s*ignore:/m.test(dependabot)) failures.push("dependabot.yml must not ignore dependencies");
+  const entries = new Map();
+  for (const block of dependabot.split(/^\s*-\s+package-ecosystem:/m).slice(1)) {
+    const name = /^\s*"?([a-z-]+)"?\s*$/m.exec(block);
+    if (name) entries.set(name[1], block);
+  }
   for (const ecosystem of ["cargo", "gomod", "github-actions"]) {
-    if (!new RegExp(`package-ecosystem:\\s*"?${ecosystem}"?\\s*$`, "m").test(dependabot)) {
-      failures.push(`dependabot.yml missing ecosystem: ${ecosystem}`);
+    if (!entries.has(ecosystem)) failures.push(`dependabot.yml missing ecosystem: ${ecosystem}`);
+  }
+  // The Cargo and Go manifests are part of the runtime fingerprint that the
+  // pinned models carry, so a version change needs a new model export. Those
+  // ecosystems take security updates only, and the proof-crypto group applies
+  // to those updates.
+  for (const ecosystem of ["cargo", "gomod"]) {
+    const block = entries.get(ecosystem);
+    if (block && !/^\s+open-pull-requests-limit:\s*0\s*$/m.test(block)) {
+      failures.push(`dependabot.yml must limit ${ecosystem} to security updates with open-pull-requests-limit: 0`);
     }
   }
-  if (!/^\s+proof-crypto:\s*$/m.test(dependabot)) failures.push("dependabot.yml missing the proof-crypto group");
+  const cargoUpdates = entries.get("cargo") ?? "";
+  if (!/^\s+proof-crypto:\s*$/m.test(cargoUpdates)) {
+    failures.push("dependabot.yml missing the proof-crypto group");
+  } else if (!/^\s+applies-to:\s*security-updates\s*$/m.test(cargoUpdates)) {
+    failures.push("dependabot.yml proof-crypto group must apply to security updates");
+  }
 }
 
 // One version across the package, the citation, the changelog and the README.

@@ -1,14 +1,22 @@
 version: 2
 updates:
+  # Rust and Go dependencies are pinned to exact versions together with the
+  # code generators, and their manifests are part of the runtime fingerprint
+  # that the pinned formal models carry (tests/runtime-source-files.json). A
+  # version change fails the Tests result check until a new model export is
+  # pinned, so these two ecosystems take security updates only:
+  # open-pull-requests-limit: 0 turns off version updates, and security
+  # updates keep their own limit.
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels:
       - dependencies
     groups:
       proof-crypto:
+        applies-to: security-updates
         patterns:
           - ed25519*
           - curve25519*
@@ -20,9 +28,10 @@ updates:
     directory: /go
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels:
       - dependencies
+  # The actions that the workflows use are outside the fingerprint.
   - package-ecosystem: github-actions
     directory: /
     schedule:
