@@ -5,7 +5,7 @@ Changes that matter to implementers are recorded here in the format of
 specification versions. The Rust crate and the Go module are not published
 as packages.
 
-## [Unreleased]
+## [0.6.1] - 2026-11-10
 
 ### Added
 

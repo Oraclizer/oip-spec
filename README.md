@@ -23,7 +23,7 @@
 </div>
 
 > **Unaudited. Not for production.** OIP v0.6.1 is a prototype-stage
-> specification draft. The Rust and Go code here makes its rules executable
+> specification. The Rust and Go code here makes its rules executable
 > and testable. Isabelle/HOL proofs cover models of the protocol under stated
 > assumptions, and the required CI check holds the Rust and Go code to models
 > exported from those proofs on fixed and seeded inputs
@@ -104,7 +104,7 @@ operation is in [`spec/operations.md`](spec/operations.md).
 
 | Version | Defined in | Treatment in this repository |
 | --- | --- | --- |
-| v0.6.1, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Current draft. Adds state commitment synchronization and accepts Write in the Ed25519 reference profile |
+| v0.6.1, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Adds state commitment synchronization and accepts Write in the Ed25519 reference profile |
 | v0.6.0, wire version 6 | [v0.6.0 release](https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.0) | Earlier version 6 operation set and matching vectors |
 | v0.5 | [OIP v0.5 documentation](https://docs.oraclizer.io/oip-v05/oip-overview/) | Used only with an authenticated, permitted legacy peer and an explicitly configured codec for the common Query and Heartbeat operations. The codec is a reference compatibility record and does not interoperate with the wire format in the published v0.5 documentation |
 | Any other version | | Refused with `UNSUPPORTED_VERSION`. Parse, signature, timeout and rejection errors never select another version |
