@@ -334,10 +334,13 @@ for (const marker of [
 // column that GitHub gives the image (the window width minus the page frame):
 // the phone banner below a 440px column, the medium banner below 680px and the
 // desktop banner above. The media queries write those column bands as window
-// widths: up to 767px the column is 66px narrower than the window, from 768px
-// to 1011px 362px narrower, and from 1012px 442px narrower.
+// widths. Measured on GitHub on 2026-11-10, the column is 66px narrower than
+// the window below 544px, 98px narrower from 544px to 767px, 362px narrower
+// from 768px to 1011px, 442px narrower from 1012px to 1279px, and 838px wide
+// from 1280px. The first matching source wins, so the medium query only needs
+// its upper bound.
 const banner =
-  /<picture>\s*<source media="\(max-width: 505px\), \(min-width: 768px\) and \(max-width: 801px\)" srcset="docs\/assets\/oip-spec-banner-mobile\.svg">\s*<source media="\(max-width: 745px\), \(min-width: 768px\) and \(max-width: 1121px\)" srcset="docs\/assets\/oip-spec-banner-medium\.svg">\s*<img src="docs\/assets\/oip-spec-banner\.svg" alt="[^"]+" width="\d+">\s*<\/picture>/;
+  /<picture>\s*<source media="\(max-width: 505px\), \(min-width: 768px\) and \(max-width: 801px\)" srcset="docs\/assets\/oip-spec-banner-mobile\.svg">\s*<source media="\(max-width: 1121px\)" srcset="docs\/assets\/oip-spec-banner-medium\.svg">\s*<img src="docs\/assets\/oip-spec-banner\.svg" alt="[^"]+" width="\d+">\s*<\/picture>/;
 if (!banner.test(readme)) {
   failures.push("README banner must be a <picture> with the phone and medium sources for 440px and 680px README columns and the desktop image");
 }

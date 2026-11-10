@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
     <source media="(max-width: 505px), (min-width: 768px) and (max-width: 801px)" srcset="docs/assets/oip-spec-banner-mobile.svg">
-    <source media="(max-width: 745px), (min-width: 768px) and (max-width: 1121px)" srcset="docs/assets/oip-spec-banner-medium.svg">
+    <source media="(max-width: 1121px)" srcset="docs/assets/oip-spec-banner-medium.svg">
     <img src="docs/assets/oip-spec-banner.svg" alt="OIP: Oracle Interoperability Protocol specification and reference implementation" width="860">
   </picture>
 
