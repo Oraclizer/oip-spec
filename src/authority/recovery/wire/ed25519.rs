@@ -18,7 +18,7 @@ use crate::wire::admission::Boundary;
 use crate::wire::codec::{WireError, decode_core, decode_packet, encode_core};
 use crate::wire::generated::{Core, core::Body};
 use crate::wire::negotiation::Channel;
-use crate::wire::operands::{Operands, decode};
+use crate::wire::operands::{Operands, decode, decode_response_for_signing};
 use crate::{AssetId, CommitCut, Principal, SessionId};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -1154,7 +1154,7 @@ impl<C: AuthorityClock> ResponseSigner for Ed25519Security<C> {
             || core.ttl_seconds != Some(self.config.response_ttl_seconds)
             || core.signature_scheme != Some(1)
             || !matches!(
-                decode(&core, self.config.max_nesting).ok()?,
+                decode_response_for_signing(&core, self.config.max_nesting).ok()?,
                 Operands::Response { .. }
             )
         {

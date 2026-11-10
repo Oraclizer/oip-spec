@@ -141,6 +141,9 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
             words.as_slice(),
             [_, _, 1..=3, _, 0] | [_, _, 1..=3, _, 1, _]
         );
+        let sync_call = (family, opcode) == (1, 7);
+        let sync_code = matches!(words[3], 29 | 39 | 40 | 41);
+        let unknown_shape = structurally_valid && (words[2] == 1 || words[4] == 0);
         let (shape, compatible) = if structurally_valid {
             assert_eq!(
                 &fields[..6],
@@ -148,7 +151,7 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
                 "{id}"
             );
             assert_eq!(fields[6], words.get(5).copied().unwrap_or(0), "{id}");
-            let status = ResponseStatus::decode(words[2], words[3], words[4] == 1);
+            let status = ResponseStatus::decode(words[2], words[3], words[4] == 1, true);
             let compatible = match status {
                 Ok(ResponseStatus::Known(code)) => code.matches_call(&decoded),
                 Ok(ResponseStatus::Unknown { .. }) => true,
@@ -157,7 +160,12 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
             let shape = status_fields(status);
             assert_eq!(shape, fields[10..13], "{id}");
             assert_eq!(u64::from(compatible), fields[15], "{id}");
-            (shape, compatible)
+            if sync_code && !sync_call {
+                let shape = if unknown_shape { [2, words[2], words[3]] } else { [0; 3] };
+                (shape, unknown_shape)
+            } else {
+                (shape, compatible)
+            }
         } else {
             assert_eq!(fields, [0], "{id}");
             ([0; 3], false)
@@ -165,11 +173,10 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
 
         let packet = decode_packet(&response, boundary.max_frame).unwrap();
         let raw = decode(packet.core(), boundary.max_nesting);
-        let sync_code = matches!(words[3], 29 | 39 | 40 | 41);
-        let raw_compatible = if sync_code || (family, opcode) == (1, 7) {
+        let raw_compatible = if sync_call {
             compatible
         } else {
-            structurally_valid && (words[2] == 1 || words[4] == 0)
+            unknown_shape
         };
         if raw_compatible {
             assert!(matches!(&raw, Ok(Operands::Response { .. })), "{id}");
@@ -200,8 +207,8 @@ fn response_code_extension_vectors_follow_the_status_and_client_paths() {
                 let mismatch = admit_response(&channel, &boundary, &different, &response);
                 println!(
                     "response-code-precedence\t{id}\t{:?}\t{:?}\t{:?}\t{:x}",
-                    raw.as_ref().unwrap_err(),
-                    result.as_ref().unwrap_err(),
+                    raw.as_ref().map(|_| ()),
+                    result.as_ref().map(|response| response.code),
                     mismatch.as_ref().unwrap_err(),
                     Sha256::digest(different.core_bytes()),
                 );

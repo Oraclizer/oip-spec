@@ -193,7 +193,8 @@ pub enum ResponseStatus {
     /// A code of this version, checked against its kind, its commit presence
     /// and the original call.
     Known(ResponseCode),
-    /// A code this version does not define, accepted as its category only.
+    /// A code this version does not define for the original call, accepted
+    /// as its category only.
     /// The verifier checks the category and commit presence but cannot check
     /// the code against the original call, so it never reports such a code
     /// as a result of this version.
@@ -201,8 +202,8 @@ pub enum ResponseStatus {
 }
 
 impl ResponseStatus {
-    fn decode(kind: u64, number: u64, commit: bool) -> Result<Self, WireError> {
-        match ResponseCode::from_number(number) {
+    fn decode(kind: u64, number: u64, commit: bool, sync_call: bool) -> Result<Self, WireError> {
+        match ResponseCode::from_number(number).filter(|code| sync_call || !code.is_sync_only()) {
             Some(code) if code.descriptor() == (kind, commit) => Ok(Self::Known(code)),
             Some(_) => Err(BAD),
             None => {
@@ -216,7 +217,7 @@ impl ResponseStatus {
     }
 
     pub(crate) fn compatible_with_sync(kind: u64, number: u64, commit: bool) -> bool {
-        Self::decode(kind, number, commit)
+        Self::decode(kind, number, commit, true)
             .is_ok_and(|status| status.known().is_none_or(ResponseCode::matches_sync_commitment))
     }
 
@@ -471,7 +472,8 @@ fn validate_response(
     if original != expected.core_bytes() || id != caller_id(&expected_operands)? {
         return Err(WireError::ReplayConflict);
     }
-    let code = ResponseStatus::decode(kind, code, commit.is_some())?;
+    let sync_call = matches!(expected_operands, Operands::SyncCommitment { .. });
+    let code = ResponseStatus::decode(kind, code, commit.is_some(), sync_call)?;
     if code
         .known()
         .is_some_and(|code| !code.matches_call(&expected_operands))
@@ -691,8 +693,11 @@ fn encode_response(
         public_key: channel.peer_keys()[0],
     };
     admit_packet(&decoded, channel.profile(), &boundary)?;
-    let _source_postcheck=validate_response(&decoded, original, boundary.max_nesting)?;
-    #[cfg(test)] source_trace::postcheck(&_source_postcheck);
+    let verified = validate_response(&decoded, original, boundary.max_nesting)?;
+    if verified.code != ResponseStatus::Known(outcome.code) {
+        return Err(BAD);
+    }
+    #[cfg(test)] source_trace::postcheck(&verified);
     Ok(packet)
 }
 

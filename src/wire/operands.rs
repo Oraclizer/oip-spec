@@ -677,12 +677,14 @@ pub(crate) fn same_original(core: &Core, original: &Core) -> bool {
         && original.version == Some(6)
 }
 
-fn ack(
-    core: &Core,
-    op: &Operation,
-    depth: usize,
-    check_sync_response_codes: bool,
-) -> Result<Operands> {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ResponseChecks {
+    Scoped,
+    BeforeStatus,
+    Signing,
+}
+
+fn ack(core: &Core, op: &Operation, depth: usize, checks: ResponseChecks) -> Result<Operands> {
     if op.appeal_deadline.is_some() {
         return Err(BAD);
     }
@@ -707,15 +709,21 @@ fn ack(
             None
         };
         words.end()?;
-        let sync_descriptor = if check_sync_response_codes {
-            ResponseCode::sync_only_descriptor(code)
-        } else {
-            None
+        let sync_call = match &decoded {
+            Operands::SyncCommitment { .. } => true,
+            Operands::Receipt { original, .. } => {
+                matches!(body(original)?, (1, op) if op.opcode == Some(7))
+            }
+            _ => false,
         };
+        let sync_descriptor = ResponseCode::sync_only_descriptor(code);
         let committed = commit.is_some();
+        let check_descriptor =
+            checks == ResponseChecks::Signing || (checks == ResponseChecks::Scoped && sync_call);
         if !(1..=3).contains(&kind)
             || (kind != 1 && committed)
-            || sync_descriptor.is_some_and(|descriptor| descriptor != (kind, committed))
+            || (check_descriptor
+                && sync_descriptor.is_some_and(|descriptor| descriptor != (kind, committed)))
         {
             return Err(BAD);
         }
@@ -736,32 +744,26 @@ fn ack(
             }
             decoded => decoded,
         };
-        let sync_call = match decoded {
+        match decoded {
             Operands::Ordinary { id: nested, payload, .. } => {
                 if nested != id || (matches!(payload.command, Command::Debit { .. })
                     && commit.is_some_and(|reference| reference.position != payload.cut.revision))
                 {
                     return Err(BAD);
                 }
-                false
             }
             Operands::Legal { id: nested, .. }
             | Operands::Spend { id: nested, .. }
+            | Operands::SyncCommitment { id: nested, .. }
                 if nested != id =>
             {
                 return Err(BAD);
             }
-            Operands::SyncCommitment { id: nested, .. } => {
-                if nested != id {
-                    return Err(BAD);
-                }
-                true
-            }
             Operands::CurrentCommitment { .. } | Operands::Response { .. } => return Err(BAD),
-            _ => false,
-        };
-        if (sync_descriptor.is_some() && !sync_call)
-            || (check_sync_response_codes && sync_call
+            _ => {}
+        }
+        if (checks == ResponseChecks::Signing && sync_descriptor.is_some() && !sync_call)
+            || (checks != ResponseChecks::BeforeStatus && sync_call
                 && !ResponseStatus::compatible_with_sync(kind, code, committed))
         {
             return Err(BAD);
@@ -905,19 +907,24 @@ fn governance(core: &Core, op: &Operation) -> Result<Operands> {
 }
 
 pub fn decode(core: &Core, max_nesting: usize) -> Result<Operands> {
-    decode_with_response_checks(core, max_nesting, true)
+    decode_with_response_checks(core, max_nesting, ResponseChecks::Scoped)
 }
 
 /// Decode the response structure and correlation fields before the signed
 /// verifier compares the retained original and checks the response status.
 pub(crate) fn decode_before_response_status(core: &Core, max_nesting: usize) -> Result<Operands> {
-    decode_with_response_checks(core, max_nesting, false)
+    decode_with_response_checks(core, max_nesting, ResponseChecks::BeforeStatus)
+}
+
+/// Decode a response under the signer’s code allocation rules.
+pub(crate) fn decode_response_for_signing(core: &Core, max_nesting: usize) -> Result<Operands> {
+    decode_with_response_checks(core, max_nesting, ResponseChecks::Signing)
 }
 
 fn decode_with_response_checks(
     core: &Core,
     max_nesting: usize,
-    check_sync_response_codes: bool,
+    checks: ResponseChecks,
 ) -> Result<Operands> {
     if max_nesting == 0 {
         return Err(BAD);
@@ -929,7 +936,7 @@ fn decode_with_response_checks(
         (1 | 3, _) => ordinary(core, family, op),
         (2, _) => legal(core, op),
         (4, _) => read(op, max_nesting),
-        (5, _) => ack(core, op, max_nesting, check_sync_response_codes),
+        (5, _) => ack(core, op, max_nesting, checks),
         (6, _) => heartbeat(core, op),
         (7, _) => governance(core, op),
         _ => Err(BAD),

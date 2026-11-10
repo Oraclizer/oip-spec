@@ -118,19 +118,28 @@ func TestResponseCodeExtensionVectors(t *testing.T) {
 			if structurallyValid {
 				kind, code := words[2], words[3]
 				compatible = fields[15] == 1
-				syncOnly, err := responseStatus(kind, code, words[4] == 1)
+				syncCall := call[0] == 1 && call[1] == 7
+				err := responseStatus(kind, code, words[4] == 1, syncCall)
 				switch code {
 				case 29, 39, 40, 41:
 					status := []uint64{0, 0, 0}
-					if err == nil && syncOnly {
+					if err == nil {
 						status = []uint64{1, kind, code}
 					}
-					if !slices.Equal(status, fields[10:13]) {
+					if !syncCall {
+						compatible = kind == 1 || words[4] == 0
+						if compatible {
+							status = []uint64{2, kind, code}
+						}
+						if (err == nil) != compatible {
+							t.Fatalf("unknown response shape: %v", err)
+						}
+					} else if !slices.Equal(status, fields[10:13]) {
 						t.Fatalf("shape %v, want %v", status, fields[10:13])
 					}
 					shape = fmt.Sprintf("%d,%d,%d", status[0], status[1], status[2])
 				default:
-					if syncOnly || (err == nil) != (kind == 1 || words[4] == 0) {
+					if (err == nil) != (kind == 1 || words[4] == 0) {
 						t.Fatalf("raw operand shape: %v", err)
 					}
 				}

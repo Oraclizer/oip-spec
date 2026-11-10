@@ -204,7 +204,9 @@ The Rust reference response verifier uses the caller's retained canonical origin
 
 Each ordinary effect code applies to the corresponding command. Closed covers Cancel and Fence. Recorded, EvidenceRefreshed and DuplicateDecision cover RecordTerminal. DuplicateConfirmed covers Credit and DuplicateReversed covers Refund. LegalEmitted and LegalApplied cover their respective stages, and legal codes 30 through 38 cover legal calls. SpendExecuted covers Spend. Codes 4 and 12 apply only to Debit. Recorded Rejected, Busy and Unavailable apply only when the exact product outcome is retained. Delivery and refusal codes are independent of the native call type.
 
-A verifier MUST accept a response code that this version does not define when its kind is 1, 2 or 3 and its commit presence fits the kind. For an unknown code, kind 1 permits either an absent or a present commit position; kinds 2 and 3 require it to be absent. Other kinds receive INVALID_FORMAT. A known code MUST have exactly the kind and commit presence listed in the table. The verifier accepts an unknown code as its kind only and MUST NOT report it as a result defined by this version.
+Codes 29, 39, 40 and 41 are defined for SyncCommitment. For an exact receipt, the verifier uses the original call carried in the receipt to select the applicable assignments. For a response to an earlier operation, the verifier MUST classify these four numbers as unknown codes and apply the usual checks for that call, including the Debit commit position check.
+
+When the other response checks pass, a verifier MUST accept an unknown code whose kind and commit presence fit the unknown-code rule. Kind 1 permits either an absent or a present commit position. Kinds 2 and 3 require the commit position to be absent. Other kinds receive INVALID_FORMAT. A known code MUST have exactly the kind and commit presence listed in the table. The verifier MUST preserve the numeric value of an unknown code and classify it by kind without assigning a named outcome.
 
 ## Effect and retry by code
 

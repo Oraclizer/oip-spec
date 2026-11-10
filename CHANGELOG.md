@@ -16,6 +16,7 @@ as packages.
 ### Compatibility
 
 - A v0.6.0 receiver refuses the new STATE_SYNC/7 and QUERY/9 opcodes with INVALID_FORMAT. A v0.6.1 receiver decodes them and uses its configured operation set. It returns UNSUPPORTED_VERSION before source or signature checks when the operation is disabled.
+- The new synchronization result codes apply to SyncCommitment responses. Replies to existing operations keep v0.6.0 unknown-code handling for those numbers.
 - The reference now admits the existing LOCK_MANAGEMENT/7 Write layout. The [v0.6.0 transport corpus](tests/vectors/v0.6.0/wire-operations.jsonl) retains the original opcode and acceptance expectations.
 
 ### Fixed

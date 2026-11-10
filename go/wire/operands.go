@@ -298,19 +298,19 @@ func sameOriginal(core, original *wirepb.Core) bool {
 }
 
 // responseStatus checks the kind and commit presence at the operand boundary.
-// syncOnly identifies the assignments exclusive to SyncCommitment.
-func responseStatus(kind, code uint64, committed bool) (syncOnly bool, err error) {
+func responseStatus(kind, code uint64, committed, syncCall bool) error {
 	if kind < 1 || kind > 3 || (kind != 1 && committed) {
-		return false, ErrFormat
+		return ErrFormat
 	}
-	switch code {
-	case 29, 39, 40, 41:
-		if kind != 1 || committed != (code == 29) {
-			return false, ErrFormat
+	if syncCall {
+		switch code {
+		case 29, 39, 40, 41:
+			if kind != 1 || committed != (code == 29) {
+				return ErrFormat
+			}
 		}
-		return true, nil
 	}
-	return false, nil
+	return nil
 }
 
 // syncResponseStatus checks the existing code assignments that can apply to
@@ -370,8 +370,15 @@ func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uin
 	if err := w.end(); err != nil {
 		return nil, err
 	}
-	syncOnly, err := responseStatus(kind, code, committed)
-	if err != nil {
+	callFamily, callOpcode := nested.Family, nested.Opcode
+	isReceipt := callFamily == 4 && callOpcode == 8
+	var innerOp *wirepb.Operation
+	if isReceipt {
+		callFamily, innerOp = Body(nested.Original)
+		callOpcode = innerOp.GetOpcode()
+	}
+	syncCall := callFamily == 1 && callOpcode == 7
+	if err := responseStatus(kind, code, committed, syncCall); err != nil {
 		return nil, err
 	}
 	if original.GetVersion() != core.GetVersion() || original.GetDeployment() != core.GetDeployment() ||
@@ -383,7 +390,6 @@ func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uin
 	debitAt := func(family, opcode, revision uint64) bool {
 		return family != 1 || opcode != 1 || !committed || position == revision
 	}
-	callFamily, callOpcode := nested.Family, nested.Opcode
 	switch {
 	case nested.Family == 5 && nested.Opcode == 2:
 		return nil, ErrFormat
@@ -395,29 +401,25 @@ func response(core *wirepb.Core, op *wirepb.Operation, depth int, summary *[]uin
 		if nested.Sync.Sequence != sequence {
 			return nil, ErrFormat
 		}
-	case nested.Family == 4 && nested.Opcode == 8:
+	case isReceipt:
 		// A receipt request answers for the original call that it carries.
 		inner := nested.Original
 		if !sameOriginal(original, inner) {
 			return nil, ErrSource
 		}
-		family, innerOp := Body(inner)
 		// Receipt decoding already validated the original as a call. All
 		// receiptable calls use word 2 for sequence and word 4 for revision.
 		if inner.GetPrincipal() != namespace || innerOp.Words[1] != sequence ||
-			!debitAt(family, innerOp.GetOpcode(), innerOp.Words[3]) {
+			!debitAt(callFamily, callOpcode, innerOp.Words[3]) {
 			return nil, ErrFormat
 		}
-		callFamily, callOpcode = family, innerOp.GetOpcode()
 	case nested.CommitmentQuery != nil:
 		return nil, ErrFormat
 	}
-	if callFamily == 1 && callOpcode == 7 {
+	if syncCall {
 		if err := syncResponseStatus(kind, code, committed); err != nil {
 			return nil, err
 		}
-	} else if syncOnly {
-		return nil, ErrFormat
 	}
 	canonical,err:=EncodeCore(original);if err!=nil {return nil,err}
 	commit:=valueNone();if committed {commit=valueSome(valueScalar(position))}
