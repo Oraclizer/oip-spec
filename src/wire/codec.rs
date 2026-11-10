@@ -119,7 +119,7 @@ pub(super) fn body(core: &Core) -> Result<(u64, &Operation)> {
 }
 
 fn opcode_allowed(family: u64, opcode: u64) -> bool {
-    [6, 3, 8, 8, 2, 2, 2]
+    [7, 3, 8, 9, 2, 2, 2]
         .get((family.saturating_sub(1)) as usize)
         .is_some_and(|last| (1..=*last).contains(&opcode))
         && family != 0

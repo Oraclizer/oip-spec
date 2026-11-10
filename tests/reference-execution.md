@@ -15,7 +15,7 @@ trust boundaries.
 
 | Capability | Input and observation scope | Required model state |
 | --- | --- | --- |
-| Transport | 161 fixed plus 512 seeded inputs; admission, retained and re-encoded Core, decoded typed values, signing preimages and transport keys | The independently pinned typed wire export and identity |
+| Transport | 180 fixed plus 512 seeded inputs covering admission, retained and re-encoded Core, typed values, signing preimages and transport keys | The independently pinned typed wire export and identity |
 | Finite financial slice | Two genesis seeds plus six raw Reserve/Dispatch/Debit steps; original selector, credential/payer, produced financial result and commit projections | A same-source `finite-financial-raw-slice-v1` export and identity |
 | Reference replay | Fifteen input rows: two genesis rows and thirteen external stimuli | Full executable model and input-only consumer ABI are not yet received |
 | Same-cut regression | Three separate rows: one genesis, duration-zero refusal and a normal Reserve using the same signed cut | Paired current-service model and consumer ABI are not yet received |

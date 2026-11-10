@@ -17,6 +17,8 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
+mod maintenance_entry;
+
 const VECTORS: &str = include_str!("../../../tests/vectors/persistent-recovery.tsv");
 pub(super) const ROOT: OriginKey = OriginKey {
     domain: 0,
@@ -43,6 +45,7 @@ struct AnchorState {
     head: Option<AnchorHead>,
     cas: Cas,
     attempts: u64,
+    attachment_checks: u64,
 }
 
 #[derive(Clone)]
@@ -54,6 +57,7 @@ impl TestAnchor {
             head: None,
             cas: Cas::Normal,
             attempts: 0,
+            attachment_checks: 0,
         })))
     }
 
@@ -98,6 +102,7 @@ impl AuthenticatedHead for TestAnchor {
         connected: bool,
         proof: &Self::AttachmentProof,
     ) -> bool {
+        self.0.lock().unwrap().attachment_checks += 1;
         (profile, connected) == *proof
     }
 

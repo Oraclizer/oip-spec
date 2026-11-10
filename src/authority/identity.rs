@@ -9,6 +9,7 @@ use super::regulation::{
     EnforcementOrder, LegalCall, LegalDecision, LegalPayload, LegalReply, LegalStage, Order,
     Policy, RegulatoryRoute, SpendCall, SpendPayload, SpendReply,
 };
+use super::sync;
 use super::{
     Acknowledgement, Authority, CallPayload, Collection, OriginDecision, SecondaryJob,
     SettlementKey,
@@ -61,6 +62,7 @@ pub enum Operation {
     ReadOwner,
     TransferOwner,
     RecoverClaim,
+    FullResync,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -78,6 +80,7 @@ pub enum ReadRequest {
 pub enum Scope {
     Asset(AssetId),
     Read(ReadRequest),
+    Commitment(sync::Stream),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -92,6 +95,7 @@ pub enum Action<'a> {
         payload: SpendPayload,
         enforcement: Option<&'a EnforcementOrder>,
     },
+    SyncCommitment(sync::Call<'a>),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -161,6 +165,19 @@ pub trait Security {
         scope: Scope,
         epoch: u64,
     ) -> bool;
+    fn permit_session(
+        &self,
+        identity: Identity,
+        proof: SessionProof,
+        target: EndpointId,
+        operation: Operation,
+        scope: Scope,
+    ) -> bool {
+        self.permit(identity, target, operation, scope, proof.epoch)
+    }
+    fn verify_commitment_attestation(&self, _call: &sync::Call<'_>) -> bool {
+        false
+    }
     fn verify(
         &self,
         identity: Identity,
@@ -279,6 +296,7 @@ pub enum ActionReply {
     Ordinary(CheckedExecution),
     Legal(LegalReply),
     Spend(SpendReply),
+    SyncCommitment(sync::Outcome),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -286,6 +304,7 @@ pub enum Receipt {
     Ordinary(Collection),
     Legal(LegalReply),
     Spend(SpendReply),
+    SyncCommitment(sync::Outcome),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -360,6 +379,14 @@ impl Action<'_> {
                 target: payload.scope.root.destination,
                 asset: payload.scope.root.asset,
             },
+            Self::SyncCommitment(call) => Claim {
+                operation: Operation::Execute,
+                caller: call.id.namespace,
+                session: call.session,
+                epoch: call.cut.authority_epoch,
+                target: call.target,
+                asset: call.stream.asset,
+            },
         }
     }
 }
@@ -392,7 +419,7 @@ impl ReadRequest {
             | Query::RootBalance(_, account) => account.endpoint == target,
             Query::SourcePool(domain, _) | Query::RegulatoryState(domain, _) => domain == target,
             Query::TerminalReceipt(origin) => origin.domain == target,
-            Query::ApplicationValue(_) => true,
+            Query::ApplicationValue(_) | Query::Commitment(_) => true,
         }
     }
 }
@@ -530,13 +557,7 @@ impl<S: Security> ProductAuthority<S> {
                 .primary
                 .ledger
                 .has_endpoint(request.target)
-            || !self.security.permit(
-                identity,
-                request.target,
-                operation,
-                Scope::Asset(claim.asset),
-                auth.proof.epoch,
-            )
+            || !self.permit_call(identity, auth.proof, request, operation)
             || !self.security.verify(
                 identity,
                 auth.proof,
@@ -552,6 +573,21 @@ impl<S: Security> ProductAuthority<S> {
             return Err(EndpointError::Rejected);
         }
         Ok(identity)
+    }
+
+    fn permit_call(
+        &self, identity: Identity, proof: SessionProof, request: &Request<'_>, operation: Operation,
+    ) -> bool {
+        let scope = Scope::Asset(request.action.claim().asset);
+        if matches!(
+            request.action,
+            Action::SyncCommitment(_)
+                | Action::Ordinary(CallPayload { command: Command::Write { .. }, .. })
+        ) {
+            self.security.permit_session(identity, proof, request.target, operation, scope)
+        } else {
+            self.security.permit(identity, request.target, operation, scope, proof.epoch)
+        }
     }
 
     fn verify_facts(
@@ -649,14 +685,16 @@ impl<S: Security> ProductAuthority<S> {
         if let Action::Ordinary(payload) = request.action {
             self.endorse_recovery(endorsement, &request, payload)?;
         }
-        self.execute_bound(AuthenticatedCaller(identity.principal), request)
+        self.execute_bound(identity, auth.proof, request)
     }
 
     fn execute_bound(
         &mut self,
-        actor: AuthenticatedCaller,
+        identity: Identity,
+        proof: SessionProof,
         request: Request<'_>,
     ) -> Result<ActionReply, EndpointError> {
+        let actor = AuthenticatedCaller(identity.principal);
         match request.action {
             Action::Ordinary(payload) => {
                 Ok(ActionReply::Ordinary(self.reads.execute_at_checked_cut(
@@ -698,6 +736,17 @@ impl<S: Security> ProductAuthority<S> {
                 },
                 |_| true,
             ))),
+            Action::SyncCommitment(call) => {
+                let security = &self.security;
+                self.reads.authority.submit_commitment(
+                    call,
+                    || security.verify_commitment_attestation(&call),
+                    || security.permit_session(
+                        identity, proof, call.target, Operation::FullResync,
+                        Scope::Commitment(call.stream),
+                    ),
+                ).map(ActionReply::SyncCommitment)
+            }
         }
     }
 
@@ -721,7 +770,9 @@ impl<S: Security> ProductAuthority<S> {
         }
         let primary = &authority.state.primary;
         Ok(match request.action {
-            Action::Ordinary(payload) if !primary.regulation.claimed(request.id) => {
+            Action::Ordinary(payload)
+                if !primary.regulation.claimed(request.id) && !primary.sync.claimed(request.id) =>
+            {
                 Some(Receipt::Ordinary(authority.observe(request.id, payload)))
             }
             Action::Ordinary(_) => None,
@@ -740,6 +791,7 @@ impl<S: Security> ProductAuthority<S> {
                 .regulation
                 .exact_spend_receipt(request.id, payload, enforcement)
                 .map(Receipt::Spend),
+            Action::SyncCommitment(call) => primary.sync.receipt(call)?.map(Receipt::SyncCommitment),
         })
     }
 
@@ -751,20 +803,13 @@ impl<S: Security> ProductAuthority<S> {
     ) -> Result<ActionReply, EndpointError> {
         let operation = request.action.claim().operation;
         let identity = self.authorize_call(auth, &request, operation)?;
-        let actor = AuthenticatedCaller(identity.principal);
         let authority = &self.reads.authority;
         if !authority.up {
             return Err(EndpointError::Unavailable);
         }
         let primary = &authority.state.primary;
-        if primary.calls.contains_key(&request.id) || primary.regulation.claimed(request.id) {
-            if !self.security.permit(
-                identity,
-                request.target,
-                Operation::Receipt,
-                Scope::Asset(request.action.claim().asset),
-                auth.proof.epoch,
-            ) {
+        if primary.claimed(request.id) {
+            if !self.permit_call(identity, auth.proof, &request, Operation::Receipt) {
                 return Err(EndpointError::Rejected);
             }
             return self.finish_retained(request);
@@ -774,6 +819,7 @@ impl<S: Security> ProductAuthority<S> {
             Action::Ordinary(payload) => payload.cut,
             Action::Legal { payload, .. } => payload.cut,
             Action::Spend { payload, .. } => payload.cut,
+            Action::SyncCommitment(call) => call.cut,
         };
         if request.expected != signed_cut {
             return Err(EndpointError::Rejected);
@@ -799,7 +845,7 @@ impl<S: Security> ProductAuthority<S> {
                 return self.finish_retained(request);
             }
         }
-        self.execute_bound(actor, request)
+        self.execute_bound(identity, auth.proof, request)
     }
 
     fn finish_retained(&mut self, request: Request<'_>) -> Result<ActionReply, EndpointError> {
@@ -818,6 +864,7 @@ impl<S: Security> ProductAuthority<S> {
             }
             Receipt::Legal(reply) => Ok(ActionReply::Legal(reply)),
             Receipt::Spend(reply) => Ok(ActionReply::Spend(reply)),
+            Receipt::SyncCommitment(outcome) => Ok(ActionReply::SyncCommitment(outcome)),
         }
     }
 

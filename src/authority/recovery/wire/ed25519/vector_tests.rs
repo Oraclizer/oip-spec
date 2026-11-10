@@ -4,6 +4,8 @@ use crate::authority::recovery::wire::vector_tests::{debit_core, operation, sign
 use crate::wire::operands::decode;
 
 mod signing_vectors;
+mod sync_tests;
+mod write_tests;
 
 fn key(seed: u8) -> SigningKey {
     SigningKey::from_bytes(&[seed; 32])
@@ -59,6 +61,7 @@ fn config() -> Ed25519Profile {
         acknowledgers: BTreeMap::new(),
         handover_maintainers: BTreeSet::new(),
         max_delivery_ttl_seconds: None,
+        sync: source::SyncPolicy::default(),
     }
 }
 
@@ -322,7 +325,7 @@ fn reference_ed25519_profile_accepts_only_the_operations_it_executes() {
     use crate::authority::recovery::wire::vector_tests::{channel, core_with};
     let security = Ed25519Security::new(config(), key(6), FixedClock(105)).unwrap();
     let channel = channel(0);
-    let refused = BTreeSet::from([(3, 7), (3, 8), (5, 2), (6, 1), (6, 2), (7, 2)]);
+    let refused = BTreeSet::from([(3, 8), (5, 2), (6, 1), (6, 2), (7, 2)]);
     let mut accepted = 0;
     for (family, count) in (1..=7).zip([6, 3, 8, 8, 2, 2, 2]) {
         for opcode in 1..=count {
@@ -332,7 +335,7 @@ fn reference_ed25519_profile_accepts_only_the_operations_it_executes() {
             accepted += usize::from(accepts);
         }
     }
-    assert_eq!(accepted, 25);
+    assert_eq!(accepted, 26);
     assert_eq!(security.max_delivery_ttl(&channel), None);
     let limited = Ed25519Profile {
         max_delivery_ttl_seconds: Some(30),

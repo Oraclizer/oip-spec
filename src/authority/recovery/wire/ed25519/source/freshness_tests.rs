@@ -184,10 +184,11 @@ fn source_live_rejects_restored_and_unselected_bytes() {
     assert_eq!(votes(&reader, origin_of(&a)), original_votes);
 
     // Drive the actual append phases to the two process-stop boundaries.
-    let (reservation, before) = source.reserve_append(&pending).unwrap();
+    let addition = Addition::Decision(&pending);
+    let (reservation, before) = source.reserve_append(addition).unwrap();
     let prepared_state = before
         .state
-        .appended(Mark::of(&reservation), pending.clone())
+        .appended(Mark::of(&reservation), addition)
         .unwrap();
     let prepared = source.prepare(before.journal, &prepared_state).unwrap();
     assert!(rollback.current().unwrap() == prepared);

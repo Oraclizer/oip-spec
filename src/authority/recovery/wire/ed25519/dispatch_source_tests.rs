@@ -1,17 +1,22 @@
 //! Actual submit/wait and message methods with an explicitly mirrored worker.
 //! The production WitnessHead/Etcd start path is not executed by this fixture.
 use super::*;
-use crate::authority::identity::Security;
+use crate::authority::CommitRef;
+use crate::authority::identity::{Observation, Security};
+use crate::authority::reads::{CurrentRead, Query, Value as ReadValue};
 use crate::authority::recovery::{AuthenticatedHead,Attachment,PersistentAuthority};
 use crate::authority::recovery::ordered::OrderedHead;
-use crate::authority::recovery::wire::ed25519::{Ed25519Profile,SessionIssuer};
+use crate::authority::recovery::wire::ed25519::{Ed25519Profile, SessionIssuer, source::SyncRoster};
 use crate::authority::recovery::wire::response::{self,source_trace};
-use crate::authority::recovery::wire::WireSecurity;
+use crate::authority::recovery::wire::{WireReply, WireSecurity};
 use crate::authority::recovery::wire::ed25519::vector_tests::reference_execution_trace::{Service,dispatcher_probe_setup,snapshot};
+use crate::authority::sync::Stream;
+use crate::CommitCut;
 use crate::wire::codec::{decode_packet,encode_packet,signing_bytes,encode_core};
 use crate::wire::generated::{Core,Packet,core::Body};
 use crate::wire::negotiation::{Offer,Negotiation,SignedOffers,select_profile,negotiate,offer_bytes,confirmation_bytes};
-use crate::wire::operands::{self,Operands};
+use crate::wire::operands::{self, Operands, SyncMode};
+use crate::wire::source_attestation::{self, SourceSignature, SourceStatement};
 use ed25519_dalek::{Signer,SigningKey};
 use serde_json::{Value,json};
 use sha2::{Digest,Sha256};
@@ -82,6 +87,58 @@ fn worker_identity()->String {
 }
 fn body(core:&mut Core)->&mut crate::wire::generated::Operation {match core.body.as_mut().unwrap(){
     Body::StateSync(v)|Body::RegulatoryAction(v)|Body::LockManagement(v)|Body::Query(v)|Body::Ack(v)|Body::Heartbeat(v)|Body::Governance(v)=>v}}
+
+fn configure_commitment(core: &mut Core, decoded: &Operands, config: &mut Ed25519Profile) {
+    match decoded {
+        Operands::SyncCommitment {
+            origin_epoch, origin_domain, origin_event, asset, source_position,
+            mode, commitment, predecessor, ..
+        } => {
+            config.sync.accept_sync = true;
+            assert_eq!(*mode, SyncMode::Initial);
+            let statement = SourceStatement {
+                deployment: core.deployment.unwrap(),
+                origin_domain: *origin_domain,
+                origin_epoch: *origin_epoch,
+                roster_id: 1,
+                asset: *asset,
+                origin_event: *origin_event,
+                source_position: *source_position,
+                commitment: *commitment,
+                predecessor: *predecessor,
+            };
+            let first = key(50);
+            let second = key(51);
+            let roster = SyncRoster {
+                origin_epoch: *origin_epoch,
+                roster_id: statement.roster_id,
+                quorum: 2,
+                signers: [
+                    (1, first.verifying_key().to_bytes()),
+                    (2, second.verifying_key().to_bytes()),
+                ].into(),
+            };
+            config.sync.rosters.insert(*origin_domain, roster);
+            let message = statement.signing_bytes();
+            let votes = [
+                SourceSignature { signer_id: 1, signature: first.sign(&message).to_bytes() },
+                SourceSignature { signer_id: 2, signature: second.sign(&message).to_bytes() },
+            ];
+            body(core).blobs[2] = source_attestation::encode(&statement, &votes).unwrap();
+        }
+        Operands::CurrentCommitment { session, asset, origin_domain, .. } => {
+            config.sync.accept_current = true;
+            let principal = core.principal.unwrap();
+            let target = core.target_domain.unwrap();
+            let grant = config.peers.get_mut(&principal).unwrap()
+                .sessions.get_mut(session).unwrap().get_mut(&target).unwrap();
+            grant.current.push(Query::Commitment(Stream { asset: *asset, origin_domain: *origin_domain }));
+            body(core).words[1] = 0;
+        }
+        _ => {}
+    }
+}
+
 #[test]
 fn actual_submit_and_mirrored_worker_original_operation_partition() {
     let fragment=worker_identity();
@@ -97,21 +154,29 @@ fn actual_submit_and_mirrored_worker_original_operation_partition() {
         let family=row["family"].as_u64().unwrap();let opcode=row["opcode"].as_u64().unwrap();if !seen.insert((family,opcode)){continue}
         let raw=row["packet_hex"].as_str().unwrap();let packet:Vec<u8>=raw.as_bytes().chunks_exact(2).map(|v|u8::from_str_radix(std::str::from_utf8(v).unwrap(),16).unwrap()).collect();
         let mut core=decode_packet(&packet,packet.len()).unwrap().core().clone();
-        let decoded=operands::decode(&core,4).unwrap();let caller=matches!(decoded,Operands::Ordinary{..}|Operands::Legal{..}|Operands::Spend{..});
+        let decoded=operands::decode(&core,4).unwrap();
+        let sync_call = matches!(decoded, Operands::SyncCommitment { .. });
+        let commitment_query = matches!(decoded, Operands::CurrentCommitment { .. });
+        let caller = sync_call || matches!(decoded, Operands::Ordinary { .. } | Operands::Legal { .. } | Operands::Spend { .. });
         if caller {body(&mut core).words[3]=0;}
         let uuid=core.uuid.as_mut().unwrap();uuid[0]=213;uuid[1]=family as u8;uuid[2]=opcode as u8;
-        let core_bytes=encode_core(&core).unwrap();let signature=key(7).sign(&signing_bytes(&core_bytes).unwrap()).to_bytes();
-        let packet=encode_packet(&Packet{core:Some(core.clone()),signature:Some(signature.to_vec())}).unwrap();
         let mut config=base.clone();config.other_endpoints.insert(2);
         for peer in config.peers.values_mut(){for grants in peer.sessions.values_mut(){let grant=grants[&0].clone();grants.insert(2,grant);}}
+        configure_commitment(&mut core, &decoded, &mut config);
+        let core_bytes=encode_core(&core).unwrap();let signature=key(7).sign(&signing_bytes(&core_bytes).unwrap()).to_bytes();
+        let packet=encode_packet(&Packet{core:Some(core.clone()),signature:Some(signature.to_vec())}).unwrap();
         let (_path,mut service,control,_clock,token)=dispatcher_probe_setup(config.clone());
         let before=snapshot(&mut service,&control);
         let site=json!({"profile":service.profile,"ordered_control_present":service.anchor.ordered_wire_control().is_some(),"security_ordered_profile":service.security.ordered_revocation_profile()});
         let policy=service.security.authority_binding(config.authority_epoch).unwrap();
         let link=channel(core.target_domain.unwrap(),core.source_domain.unwrap(),6,7);let saved_channel=channel_json(&link);
+        assert_eq!(service.security.accepts_operation(&link, &core), row["reference_accepts"].as_bool().unwrap());
         let sink=source_trace::register(&packet);
         let dispatcher=start_fixture(service,NonZeroUsize::new(1).unwrap(),Duration::from_secs(30)).unwrap();
         let result=dispatcher.receive(link,token,packet.clone(),Instant::now()+Duration::from_secs(30));dispatcher.shutdown().unwrap();source_trace::unregister(&packet);
+        if sync_call {
+            assert!(result.is_ok(), "{result:?}");
+        }
         let trace=sink.lock().unwrap().clone();
         let ready=trace.get("typed_observation").cloned().unwrap_or_else(||json!({"mode":3,"reply_values":[],"retained_present":false,"retained_values":[]}));
         if caller && row["reference_accepts"].as_bool().unwrap(){assert_ne!(ready["mode"],3,"A ready caller needs its actual before-converter value");}
@@ -135,15 +200,51 @@ fn actual_submit_and_mirrored_worker_original_operation_partition() {
                 "key_id":boundary.key_id,"epoch":boundary.epoch,"route_scope":boundary.route_scope,"now":boundary.now,"asset_ttl_floor":boundary.asset_ttl_floor,"future_skew":boundary.future_skew,
                 "max_frame":boundary.max_frame,"max_nesting":boundary.max_nesting,"version_floor":boundary.version_floor,"critical_allowed":boundary.critical_allowed,"public_key_hex":hex(&boundary.public_key)},
                 "canonical_expected_packet_hex":hex(&packet),"network_response_packet_hex":hex(response_bytes),"provenance":"source packet as explicit client network input; never sender answer"}));
-            client_result=match response::admit_response(&client_channel,&boundary,&decode_packet(&packet,packet.len()).unwrap(),response_bytes){Ok(value)=>json!({"status":0,"value":source_trace::client_result(&value)}),Err(error)=>json!({"error_debug":format!("{error:?}")})};
+            let original = decode_packet(&packet, packet.len()).unwrap();
+            let verified = response::admit_response(&client_channel, &boundary, &original, response_bytes);
+            if sync_call {
+                let value = verified.as_ref().unwrap();
+                assert_eq!(value.code, response::ResponseStatus::Known(response::ResponseCode::StateCommitmentSynced));
+                assert_eq!(value.commit, Some(CommitRef { position: 0 }));
+            }
+            client_result=match verified{Ok(value)=>json!({"status":0,"value":source_trace::client_result(&value)}),Err(error)=>json!({"error_debug":format!("{error:?}")})};
         }
         let restored=Ed25519Security::new(config.clone(),key(6),_clock.clone()).unwrap();
         let mut after_service=PersistentAuthority::open(_path.file(),OrderedHead::new(control.clone(),config.profile,1),Attachment{profile:config.profile,proof:(config.profile,true),source_connected:true,security:restored}).unwrap();
         let after=snapshot(&mut after_service,&control);
-        output(&mut observed,json!({"id":id,"response_packet_hex":result.as_ref().ok().map(|v|hex(v)),"error_debug":result.err().map(|e|format!("{e:?}")),
-            "trace":trace,"before":before,"after":after,"client_result":client_result,"scope":"actual submit/wait + exact-source mirrored worker + actual message runtime; production Witness/Etcd start unreceived"}));
+        if sync_call {
+            assert_eq!(after["product"]["cut"]["revision"], 1);
+        }
+        let host_observation = if commitment_query {
+            assert_eq!(result, Err(WireError::InvalidFormat));
+            let channel = channel(core.target_domain.unwrap(), core.source_domain.unwrap(), 6, 7);
+            let token = SessionIssuer::new(key(8)).issue(&after_service.security, 7, 2, 300).unwrap();
+            let credentials = WireCredentials {
+                token: &token, signature: &packet, maintenance: None,
+                endorsement: None, previous: None, successor: None,
+            };
+            let observed = after_service.receive_wire(
+                &channel, Entry::Normal, &packet, &credentials, DeliveryWindow::default(),
+            ).unwrap();
+            let WireReply::Observation(Observation::Current(Ok(current))) = observed.reply else {
+                panic!("expected current commitment host observation");
+            };
+            assert_eq!(current, CurrentRead {
+                cut: CommitCut { authority_epoch: config.authority_epoch, revision: 0 },
+                value: ReadValue::Commitment(None),
+            });
+            Some(current)
+        } else {
+            None
+        };
+        let mut observation = json!({"id":id,"response_packet_hex":result.as_ref().ok().map(|v|hex(v)),"error_debug":result.err().map(|e|format!("{e:?}")),
+            "trace":trace,"before":before,"after":after,"client_result":client_result,"scope":"actual submit/wait + exact-source mirrored worker + actual message runtime; production Witness/Etcd start unreceived"});
+        if let Some(current) = host_observation {
+            observation["host_observation"] = json!(current);
+        }
+        output(&mut observed, observation);
     }
-    assert_eq!(counts,[15,10,6]);assert_eq!(seen.len(),31);
-    fs::write(out.join("scope.json"),serde_json::to_vec(&json!({"operation_branches":31,"caller":15,"noncaller":10,"configured_refusal":6,
+    assert_eq!(counts,[17,11,5]);assert_eq!(seen.len(),33);
+    fs::write(out.join("scope.json"),serde_json::to_vec(&json!({"operation_branches":seen.len(),"caller":counts[0],"noncaller":counts[1],"configured_refusal":counts[2],
         "actual_submit_wait":true,"production_worker_start_executed":false,"production_worker_fragment_sha256":fragment,"independent_witness_runtime":false})).unwrap()).unwrap();
 }

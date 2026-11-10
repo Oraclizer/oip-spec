@@ -12,9 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// The six operations of version 6 that the reference configuration does
-// not execute.
-var referenceRefused = [][2]uint64{{3, 7}, {3, 8}, {5, 2}, {6, 1}, {6, 2}, {7, 2}}
+var referenceRefused = [][2]uint64{{3, 8}, {5, 2}, {6, 1}, {6, 2}, {7, 2}}
 
 func withBody(core *wirepb.Core, family uint64, op *wirepb.Operation) *wirepb.Core {
 	switch family {
@@ -50,7 +48,7 @@ func rawFrame(t *testing.T, core []byte) []byte {
 
 func TestReferenceProfileAcceptsTheOperationsItExecutes(t *testing.T) {
 	accepted := 0
-	for family, count := range []uint64{6, 3, 8, 8, 2, 2, 2} {
+	for family, count := range []uint64{7, 3, 8, 9, 2, 2, 2} {
 		for opcode := uint64(1); opcode <= count; opcode++ {
 			core := withBody(coreFixture(2, uint64(family+1), 1), uint64(family+1), &wirepb.Operation{Opcode: proto.Uint64(opcode)})
 			refused := false
@@ -65,7 +63,7 @@ func TestReferenceProfileAcceptsTheOperationsItExecutes(t *testing.T) {
 			}
 		}
 	}
-	if accepted != 25 {
+	if accepted != 28 {
 		t.Fatalf("accepted %d operations", accepted)
 	}
 }

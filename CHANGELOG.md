@@ -5,6 +5,24 @@ Changes that matter to implementers are recorded here in the format of
 specification versions. The Rust crate and the Go module are not published
 as packages.
 
+## [0.6.1] - 2026-11-10
+
+### Added
+
+- Version 6 operation extension and response allocation rules.
+- `SyncCommitment` and `CurrentCommitment`, with binary source attestations, current roster verification and independent source record selection.
+- Reference admission and execution for the existing `Write` operation and DATA_UPDATED result.
+
+### Compatibility
+
+- A v0.6.0 receiver refuses the new STATE_SYNC/7 and QUERY/9 opcodes with INVALID_FORMAT. A v0.6.1 receiver decodes them and uses its configured operation set. It returns UNSUPPORTED_VERSION before source or signature checks when the operation is disabled.
+- The new synchronization result codes apply to SyncCommitment responses. Replies to existing operations keep v0.6.0 unknown-code handling for those numbers.
+- The reference now admits the existing LOCK_MANAGEMENT/7 Write layout. The [v0.6.0 transport corpus](tests/vectors/v0.6.0/wire-operations.jsonl) retains the original opcode and acceptance expectations.
+
+### Fixed
+
+- Generic mutable entry points now enforce the selected ordered maintenance boundary.
+
 ## [0.6.0] - 2026-11-09
 
 Version 0.6.0 defines a signed protobuf message (wire version 6), the checks

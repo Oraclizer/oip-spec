@@ -113,7 +113,7 @@ fn is_debited(reply: DebitResult) -> bool {
 }
 
 #[derive(Clone)]
-struct MemoryControl(Arc<std::sync::Mutex<ControlValue>>);
+pub(in crate::authority::recovery) struct MemoryControl(Arc<std::sync::Mutex<ControlValue>>);
 
 pub(in crate::authority::recovery) mod schedule_tests;
 
@@ -156,9 +156,15 @@ fn memory_endpoint_at(path: &JournalPath, head: AnchorHead) -> MemoryEndpoint {
     memory_endpoint_configured(path, head, |_| {})
 }
 
+impl MemoryControl {
+    pub(in crate::authority::recovery) fn with_head(head: Option<AnchorHead>) -> Self {
+        let bytes = OrderedHead::<Self>::initial_value(DEFAULT_PROFILE, head, 1).unwrap();
+        Self(Arc::new(std::sync::Mutex::new(ControlValue { revision: 1, bytes })))
+    }
+}
+
 fn memory_control(head: AnchorHead) -> MemoryControl {
-    let bytes = OrderedHead::<MemoryControl>::initial_value(DEFAULT_PROFILE, Some(head), 1).unwrap();
-    MemoryControl(Arc::new(std::sync::Mutex::new(ControlValue { revision: 1, bytes })))
+    MemoryControl::with_head(Some(head))
 }
 
 fn memory_open(file: fs::File, control: MemoryControl, writer: u64, security: Rules) -> MemoryEndpoint {

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="2882" viewBox="0 0 600 2882" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="oipfvm-title oipfvm-desc">
   <title id="oipfvm-title">How the code connects to the formal models, mobile layout</title>
-  <desc id="oipfvm-desc">Two repositories and the check that joins them. Oraclizer/formal-verification holds nine Isabelle/HOL sessions for the OIP product, reference profile, record reopening, recovery boundary and message interfaces, whose theorems hold under named assumptions; correspondence statements for selected Rust operations, maintained by hand; and executable models exported from the checked theories and used unedited. This repository holds the specification, the Rust reference, the Go message layer and a lock file that pins each exported model by SHA-256 and Git blob. The required Tests result check runs Rust, Go and the typed transport model on 673 inputs, and Rust and the full response model on 259 inputs; any difference fails. Not established: a refinement proof for every compiled Rust or Go run, a security audit, or deployment and production safety.</desc>
+  <desc id="oipfvm-desc">Oraclizer/formal-verification publishes Isabelle/HOL models with named assumptions, Rust source correspondence and executable exports from the checked theories. This repository publishes the specification and reference code and pins the model files by SHA-256 and Git blob. The required Tests check compares Rust, Go and the typed transport model on 692 inputs, and Rust and the full response model on 261 inputs. Any difference fails the check. Model and conformance evidence applies within its stated scope.</desc>
   <defs>
     <linearGradient id="oipfvm-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060b18"/><stop offset=".62" stop-color="#0a1430"/><stop offset="1" stop-color="#0c1a3d"/></linearGradient>
     <pattern id="oipfvm-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#9fb6e0" stroke-width="1" opacity=".035"/></pattern>
@@ -28,7 +28,7 @@
   <text x="46" y="305.75" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="17" fill="#7f93bd">Oracle_Interoperability_Protocol/</text>
   <rect class="card" x="46" y="323.75" width="508" height="179.16" rx="14" fill="#171338" stroke="#4d43a0" stroke-width="1.4"/>
   <text x="64" y="362.65" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="700" fill="#d4ccff">Isabelle/HOL models</text>
-  <text x="64" y="394.55" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" fill="#d3def5">Nine sessions: product, reference profile,</text>
+  <text x="64" y="394.55" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" fill="#d3def5">Product and reference models,</text>
   <text x="64" y="422.95" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" fill="#d3def5">record reopening, recovery boundary</text>
   <text x="64" y="451.35" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" fill="#d3def5">and messages</text>
   <text x="64" y="476.91" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#a99fe0">Theorems hold under named assumptions</text>
@@ -57,7 +57,7 @@
   <rect class="card" x="46" y="1112.03" width="508" height="116.68" rx="14" fill="#0b1834" stroke="#2b4677" stroke-width="1.4"/>
   <text x="64" y="1150.93" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="700" fill="#eef3ff">Specification</text>
   <text x="64" y="1177.15" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="16" fill="#8cc0ff">spec/ proto/oip.proto</text>
-  <text x="64" y="1202.71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">31 operations, wire version 6</text>
+  <text x="64" y="1202.71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#93a8d4">33 operations, wire version 6</text>
   <rect class="card" x="46" y="1244.71" width="508" height="156.68" rx="14" fill="#0b1834" stroke="#2b4677" stroke-width="1.4"/>
   <text x="64" y="1283.61" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="700" fill="#eef3ff">Rust reference</text>
   <text x="64" y="1309.83" font-family="SFMono-Regular,Consolas,Menlo,monospace" font-size="16" fill="#8cc0ff">src/</text>
@@ -87,12 +87,12 @@
   <text x="46" y="1992.27" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">blob and SHA-256, then run beside the actual</text>
   <text x="46" y="2019.25" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">Rust and Go code.</text>
   <text x="46" y="2061.65" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700" fill="#a6f0dc">Transport values</text>
-  <text x="46" y="2088.63" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">Rust, Go and the typed model on 673 inputs,</text>
-  <text x="46" y="2115.61" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">161 fixed and 512 seeded. All seven recorded</text>
+  <text x="46" y="2088.63" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">Rust, Go and the typed model on 692 inputs,</text>
+  <text x="46" y="2115.61" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">180 fixed and 512 seeded. All seven recorded</text>
   <text x="46" y="2142.59" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">fields must match.</text>
   <text x="46" y="2184.99" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700" fill="#a6f0dc">Response boundary</text>
-  <text x="46" y="2211.97" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">Rust and the full model on 259 inputs: 31 operations,</text>
-  <text x="46" y="2238.95" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">207 typed results and 21 client inputs.</text>
+  <text x="46" y="2211.97" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">Rust and the full model agree on 261 inputs</text>
+  <text x="46" y="2238.95" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#d3def5">33 operations, 207 typed results and 21 client inputs.</text>
   <path d="M46 2254.95H554" class="sep" fill="none" stroke="#2f8f7c" stroke-width="1"/>
   <text x="46" y="2291.93" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#a6f0dc">A missing pin, a stale model or any difference fails</text>
   <text x="46" y="2318.91" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#a6f0dc">the check.</text>

@@ -43,7 +43,7 @@
       "arity": 2,
       "fields": [
         "SessionProof104",
-        "ReadRequest150..155"
+        "ReadRequest150..156"
       ]
     },
     "14": {
@@ -132,6 +132,24 @@
         "List Context106",
         "List SessionBinding107",
         "Bytes proof"
+      ]
+    },
+    "22": {
+      "name": "SyncCommitment",
+      "arity": 12,
+      "fields": [
+        "Scalar message reference",
+        "Pair90 call id(namespace,sequence)",
+        "Scalar session",
+        "Pair90 signed cut(epoch,revision)",
+        "Scalar origin epoch",
+        "Pair90 origin(domain,event)",
+        "Scalar asset",
+        "Scalar source position",
+        "Scalar synchronization mode",
+        "Bytes commitment",
+        "Option Bytes predecessor",
+        "Bytes source attestation"
       ]
     },
     "90": {
@@ -406,6 +424,15 @@
       "arity": 1,
       "fields": [
         "Scalar asset"
+      ]
+    },
+    "156": {
+      "name": "CurrentCommitment",
+      "arity": 3,
+      "fields": [
+        "Pair90 expected cut(epoch,revision)",
+        "Scalar asset",
+        "Scalar origin domain"
       ]
     },
     "160": {

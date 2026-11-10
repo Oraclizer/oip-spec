@@ -266,10 +266,10 @@
           "const": "intinf-wire-values-v2"
         },
         "scope": {
-          "const": "wire-v6-general-31-values"
+          "const": "wire-v6-general-33-values"
         },
         "entrypoint": {
-          "const": "OIP_Wire_Oracle.code_typed_transport_flat_oracle"
+          "const": "OIP_Wire_Oracle_V061.sync_v061_nested_transport_flat"
         },
         "natural_refinement": {
           "const": "HOL-Library.Code_Target_Nat"
@@ -394,10 +394,10 @@
       "const": "intinf-wire-values-v2"
     },
     "scope": {
-      "const": "wire-v6-general-31-values"
+      "const": "wire-v6-general-33-values"
     },
     "entrypoint": {
-      "const": "OIP_Wire_Oracle.code_typed_transport_flat_oracle"
+      "const": "OIP_Wire_Oracle_V061.sync_v061_nested_transport_flat"
     },
     "natural_refinement": {
       "const": "HOL-Library.Code_Target_Nat"
@@ -421,7 +421,7 @@
           "const": "tests/vectors/wire-operations.jsonl"
         },
         "rows": {
-          "const": 673
+          "const": 692
         },
         "sha256": {
           "$ref": "#/$defs/sha256"
@@ -441,7 +441,7 @@
       "pattern": "^Oracle_Interoperability_Protocol(?:/[A-Za-z0-9_.-]+)*$"
     },
     "identity_function": {
-      "const": "OIP_Wire_Oracle.code_typed_model_identity"
+      "const": "OIP_Wire_Oracle_V061.sync_v061_typed_model_identity"
     }
   }
 }

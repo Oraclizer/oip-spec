@@ -6,15 +6,16 @@ Its lock binds exact model, driver, origin and diagnostic content together
 with the current source fingerprint. Missing or stale pins fail the check;
 interface controls or legacy source identities cannot satisfy it.
 
-The Full identity is exactly six ASCII integer-list fields:
+The Full identity returns six ASCII integer-list fields. The final field is the
+`runtime_source_hash` in [the full response lock](wire-response-artifact.lock.json).
 
 ```text
 1
-intinf-response-full-v1
-wire-response-sender-client-v1
+intinf-response-full-v2
+wire-response-sender-client-v2
 OIP_Wire_Response_Boundary.code_response_egress_flat_oracle
 HOL-Library.Code_Target_Nat
-28500a91beb9478d3de97ed0d9a2913bf7ea3202a5b546627e02df53b998b207
+<runtime source fingerprint>
 ```
 
 `code_response_full_model_identity ()` is a separate fixed constant helper.
@@ -62,8 +63,10 @@ input enums are captured separately from production conversion, constructor
 prefixes, signer calls and final packet/error observations. They do not execute
 the original dispatcher or original preflight.
 
-The original-operation fixture has fifteen caller branches, ten noncaller
-branches and six configured refusals. It executes the production
+The original-operation fixture has seventeen caller branches, eleven noncaller
+branches and five configured refusals. The consumer requires the exact fixture
+file set and checks the recorded byte lengths and SHA-256 digests before parsing
+those bytes. The fixture executes the production
 `OrderedDispatcher::receive`/submit/wait/shutdown methods and actual message
 methods with actual Ed25519 security. A test-only factory compiles the exact
 production worker while-body against MemoryCAS plus OrderedHead. Runtime and

@@ -5,13 +5,12 @@ abstract: >-
   OIP, the Oracle Interoperability Protocol, defines message semantics,
   state transitions, routing, validation, errors and conformance rules for
   state-machine implementations that change state across chains and
-  off-chain systems. Version 0.6.0 specifies a signed protobuf message (wire
-  version 6), the checks a receiver applies before any effect, and the
-  recorded outcome of each of its 31 operations. The repository includes a
-  Rust reference implementation and a Go message layer, both generated from
-  one schema and tested against shared vectors.
+  off-chain systems. Version 0.6.1 specifies signed protobuf messages (wire
+  version 6), the layouts and rules of 33 operations, and the outcomes that
+  recorded calls retain. The Rust reference and Go message layer use bindings
+  generated from one schema and run against shared vectors.
 type: software
-version: "0.6.0"
+version: "0.6.1"
 license: Apache-2.0
 authors:
   - family-names: "Kim"

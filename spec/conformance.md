@@ -1,6 +1,6 @@
-# OIP v0.6.0 conformance scope
+# OIP v0.6.1 conformance scope
 
-This document is part of OIP v0.6.0. It states how the specification documents use requirement key words, which requirements every implementation meets, which statements describe the reference implementation in this repository, and the constraints of this version.
+This document is part of OIP v0.6.1. It states how the specification documents use requirement key words, which requirements every implementation meets, which statements describe the reference implementation in this repository, and the constraints of this version.
 
 ## Requirement key words
 
@@ -8,7 +8,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Protocol core and reference profile
 
-The protocol core is what every conforming implementation of OIP v0.6.0 implements in the same way: the canonical bytes and field numbers, the operand positions of every operation, the envelope and negotiation signing inputs, the version check, the response codes and their effect, and the product rules stated with key words.
+Every conforming OIP v0.6.1 implementation uses the same canonical bytes and field numbers, operation layouts, envelope and negotiation signing inputs, version check, response codes and effects, and product rules stated with key words. These requirements form the protocol core.
 
 The reference profile is the configuration of the Rust reference implementation in this repository. It covers its Ed25519 session and maintenance tokens, its JSON signing inputs, its configuration values and accepted operations, its storage and control transports and its host adapters. A statement that names the reference, the reference profile or the reference configuration, and every section whose heading names the reference, describes the reference profile. Another implementation MAY use a different profile when it meets the protocol core. All other key-word statements belong to the protocol core.
 
@@ -24,6 +24,8 @@ The reference profile is the configuration of the Rust reference implementation 
 | [current-and-historical-reads.md](current-and-historical-reads.md) | Current and historical observations |
 | [identity-handover.md](identity-handover.md) | Caller identity and ownership handover |
 | [lock-finality.md](lock-finality.md) | Locks, pending mass and terminal evidence |
+| [state-commitment-sync.md](state-commitment-sync.md) | Operation additions, state synchronization and binary source attestations |
+| [response-code-extension.md](response-code-extension.md) | Response code assignments, compatibility and retry |
 | [parallel-composition.md](parallel-composition.md) | Compatible service actions |
 | [persistent-recovery.md](persistent-recovery.md) | Durable authority commit and recovery |
 | [regulatory-execution.md](regulatory-execution.md) | Regulatory execution |
@@ -37,11 +39,11 @@ The reference profile is the configuration of the Rust reference implementation 
 - SINGLE with Ed25519 is the only implemented signature scheme. THRESHOLD has a scheme code and no verifier, and the reference refuses it as INVALID_THRESHOLD_SIGNATURE.
 - A state-changing request executes only when its signed cut equals the current global revision and authority epoch. A write that commits between signing and execution makes the request Busy without effect, also when the two touch different assets.
 - A recorded Busy or Unavailable consumes the call identifier. Executing the work again needs a new signed cut, a new call sequence number, a new transport UUID and a new signature.
-- The reference profile signs its tokens, policy bindings, authorizations and source attestations as JSON text ([JSON encodings](json-encodings.md)).
+- The reference profile signs its tokens, policy bindings, authorizations and terminal source attestations as [JSON text](json-encodings.md). Synchronization uses the dedicated [binary source statement](state-commitment-sync.md#source-attestation).
 - The maximum frame size, nesting depth, clock skew allowed for issued times, asset-class TTL floor and maximum delivery TTL are configuration values. This version fixes no numbers for them.
 - Channels are set up out of band. The host verifies the signed offers and confirmation and installs the channel, and the reference accepts no HEARTBEAT frame as a delivery.
 - Delivery is single hop. No relay that changes processing is defined.
-- The reference configuration accepts 25 of the 31 operations. Write, Timeout, authorized epoch installation, Capabilities, Liveness and the inbound correlated response receive UNSUPPORTED_VERSION.
+- The reference configuration accepts 28 of the 33 operations when SyncCommitment and CurrentCommitment are enabled. Rust exposes separate flags for the two operations. Timeout, authorized epoch installation, Capabilities, Liveness and inbound correlated responses receive UNSUPPORTED_VERSION.
 - The reference implementation assumes a 64-bit host. It converts 64-bit wire values to the host's native size type.
 - The Rust persistent authority implements the reference execution, configured delivery TTL limit, signed response generation and signature-checked response verifier. The Go package implements the wire, negotiation, transport admission and operand decoding functions, including response operand correlation, but has no persistent authority or signature-checked response-verifier API.
 - Ordinary request admission can refuse source registration, delivery-window or cancellation checks before envelope signature verification. A caller observing the local unsigned error can distinguish an unregistered source from an invalid signature for a registered source. The response-generation path verifies with the channel's authenticated peer key before signing a response.

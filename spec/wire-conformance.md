@@ -1,6 +1,6 @@
 # OIP v0.6 canonical message and version profiles
 
-This document is part of OIP v0.6.0. [Conformance scope](conformance.md) defines the requirement key words and separates the protocol core from the reference profile.
+This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines the requirement key words and separates the protocol core from the reference profile.
 
 ## Version coexistence
 
@@ -16,7 +16,7 @@ This document is part of OIP v0.6.0. [Conformance scope](conformance.md) defines
 - On a version 6 channel, a receiver MUST read the declared version of a frame within its size limit before canonical decoding of the rest of the frame. The declared version is the varint value of Core field 1 when the frame starts with Packet field 1 and the embedded Core starts with field 1. A frame that declares a version other than 6 MUST receive UNSUPPORTED_VERSION, whatever fields follow. A frame that declares no version continues to the canonical checks. This check does not precede checks of the installed channel or host configuration.
 - The position and encoding of Packet field 1, Core field 1 and its varint form the version selector of the canonical protobuf format. The selector requires the shortest varints for the Packet tag, Core length, Core field-1 tag and unsigned 64-bit version, and requires the complete declared Core payload. It does not scan past a different first field. If any selector component is missing, truncated, overlong or out of range, the selector declares no version and canonical decoding decides the error. In particular, a truncated Core with a visible version prefix does not select that version. The reference version 5 compatibility path uses its configured JSON record decoder without this protobuf version selector; a malformed compatibility record receives INVALID_FORMAT.
 - Within a version, a receiver MUST reject an unknown field, an unknown wire type or an out-of-order field as INVALID_FORMAT. A new field can enter the protocol only through a new version that both peers negotiate.
-- After canonical decoding, an operation outside the selected version profile MUST receive UNSUPPORTED_VERSION before its source, signature or authority is checked. The selected version profile is the negotiated version together with the operations that the receiver's configuration accepts. The reference configuration accepts 25 of the 31 operations, listed in the "Reference accepts" column of [operations](operations.md). Rust checks the configured operation set in the authority entry paths, including response generation and exact Debit resolution. The generic Rust transport decoder has no configuration-specific operation set. Go exposes the configured check through `ReceiveAccepting`; its generic `Receive` path does not select that set.
+- After canonical decoding, an operation outside the selected version profile MUST receive UNSUPPORTED_VERSION before its source, signature or authority is checked. The selected version profile is the negotiated version together with the operations that the receiver's configuration accepts. The fully enabled reference configuration accepts 28 of the 33 operations listed in [operations](operations.md). Rust checks the configured set in authority entry paths, including response generation and exact Debit resolution. Go exposes the configured check through `ReceiveAccepting`. The generic transport decoders apply the [version 6 extension rules](state-commitment-sync.md#operation-extension).
 
 ## Canonical signed message
 
@@ -196,13 +196,17 @@ The Rust reference response verifier uses the caller's retained canonical origin
 | 1 recorded | Absent | 1 Rejected, 2 Busy, 3 Unavailable, 4 exact original Debit closed without effect |
 | 1 recorded | Present | 10 Reserved, 11 SourceDispatched, 12 Debited, 13 Closed, 14 Preempted, 15 TimeObserved, 16 Recorded, 17 Credited, 18 Reconciled, 19 Refunded, 20 DataUpdated, 21 EvidenceRefreshed, 22 Published |
 | 1 recorded | Present | 23 DuplicateDecision, 24 DuplicateConfirmed, 25 DuplicateReversed, 26 LegalEmitted, 27 LegalApplied, 28 SpendExecuted |
+| 1 recorded | Present | 29 STATE_COMMITMENT_SYNCED |
 | 1 recorded | Absent | 30 LegalInvalidAuthority, 31 LegalInvalidState, 32 LegalInvalidBinding, 33 LegalMissingPriorFreeze, 34 LegalMissingPriorSeizure, 35 LegalAppealStillOpen, 36 LegalAppealDeadlineMismatch, 37 LegalMissingDestination, 38 LegalConflictingOrder |
+| 1 recorded | Absent | 39 STATE_COMMITMENT_MISMATCH, 40 STATE_COMMITMENT_STALE, 41 SOURCE_ATTESTATION_REJECTED |
 | 2 delivery | Absent | 50 Unresolved, 51 ResponseLost, 52 DeadlineExpired, 53 Cancelled, 54 TtlExpired, 55 DeliveryBusy, 56 DeliveryUnavailable |
 | 3 refusal | Absent | 70 InvalidFormat, 71 UnsupportedVersion, 72 InvalidSource, 73 InvalidSignature, 74 InvalidThresholdSignature, 75 TtlInvalid, 76 ReplayConflict, 77 ProductRejected |
 
 Each ordinary effect code applies to the corresponding command. Closed covers Cancel and Fence. Recorded, EvidenceRefreshed and DuplicateDecision cover RecordTerminal. DuplicateConfirmed covers Credit and DuplicateReversed covers Refund. LegalEmitted and LegalApplied cover their respective stages, and legal codes 30 through 38 cover legal calls. SpendExecuted covers Spend. Codes 4 and 12 apply only to Debit. Recorded Rejected, Busy and Unavailable apply only when the exact product outcome is retained. Delivery and refusal codes are independent of the native call type.
 
-A verifier MUST accept a response code that this version does not define when its kind is 1, 2 or 3 and its commit presence fits the kind. For an unknown code, kind 1 permits either an absent or a present commit position; kinds 2 and 3 require it to be absent. Other kinds receive INVALID_FORMAT. A known code MUST have exactly the kind and commit presence listed in the table. The verifier accepts an unknown code as its kind only and MUST NOT report it as a result defined by this version.
+Codes 29, 39, 40 and 41 are defined for SyncCommitment. For an exact receipt, the verifier uses the original call carried in the receipt to select the applicable assignments. For a response to an earlier operation, the verifier MUST classify these four numbers as unknown codes and apply the usual checks for that call, including the Debit commit position check.
+
+When the other response checks pass, a verifier MUST accept an unknown code whose kind and commit presence fit the unknown-code rule. Kind 1 permits either an absent or a present commit position. Kinds 2 and 3 require the commit position to be absent. Other kinds receive INVALID_FORMAT. A known code MUST have exactly the kind and commit presence listed in the table. The verifier MUST preserve the numeric value of an unknown code and classify it by kind without assigning a named outcome.
 
 ## Effect and retry by code
 
@@ -213,7 +217,11 @@ A verifier MUST accept a response code that this version does not define when it
 | 3 Unavailable | No effect. The outcome is recorded and consumes the call identifier. | As for Busy. | None |
 | 4 | The original Debit was closed without effect. | The original Debit cannot execute later. | None |
 | 10 to 28 | The named effect is committed. | The same request returns the same outcome without another effect. | None |
+| 29 | The authorized stream entry is committed. | The same authorized request returns the retained outcome. | ACK type PROCESSED |
 | 30 to 38 | No legal effect. The outcome is recorded and consumes the call identifier. | New work needs a new call. | 33 FREEZE_REQUIRED_BEFORE_SEIZE, 34 SEIZE_REQUIRED_BEFORE_CONFISCATE, 35 APPEAL_PERIOD_NOT_EXPIRED, 31 INVALID_STATE_TRANSITION |
+| 39 StateCommitmentMismatch | The stream is unchanged. The mode, predecessor or additional resynchronization grant fails the current check. The outcome consumes the call identifier. | The exact authorized request returns the retained outcome. Corrected work needs a new call. | STATE_HASH_MISMATCH |
+| 40 StateCommitmentStale | The stream is unchanged. The origin event was used or the source position did not increase. The outcome consumes the call identifier. | The exact authorized request returns the retained outcome. Use a fresh source event and position for new work. | None |
+| 41 SourceAttestationRejected | The stream is unchanged. The source attestation fails the current roster, exact statement or signature check. The outcome consumes the call identifier. | The exact authorized request returns the retained outcome. Obtain valid source evidence and submit a new call. | INVALID_DRIVER_ATTESTATION |
 | 50 Unresolved, 51 ResponseLost, 52 DeadlineExpired | Unknown. The effect can have been committed. | Resolve the original signed request through an exact authorized resolution before reissuing the work. | DELIVERY_TIMEOUT for 50 and 52 |
 | 53 Cancelled, 55 DeliveryBusy, 56 DeliveryUnavailable | No effect. | Send a new signed request. | None |
 | 54 TtlExpired | No effect. | Send a new signed request with a new transport UUID and issued time. | MESSAGE_TTL_EXPIRED |
@@ -236,10 +244,10 @@ All seven body variants use an embedded Operation record. Its opcode is varint t
 
 | Family code | Body operations in opcode order |
 |---|---|
-| 1 STATE_SYNC | Debit, record terminal evidence, deliver credit, refund, publish primary, ordinary spend |
+| 1 STATE_SYNC | Debit, record terminal evidence, deliver credit, refund, publish primary, ordinary spend, synchronize commitment |
 | 2 REGULATORY_ACTION | Emit legal order, commit legal order, enforcement spend |
 | 3 LOCK_MANAGEMENT | Reserve, dispatch, cancel, fence, preempt, reconcile, write, timeout |
-| 4 QUERY | Current, historical, raw, operation status, journal, capture cache, owner, exact receipt |
+| 4 QUERY | Current, historical, raw, operation status, journal, capture cache, owner, exact receipt, current commitment |
 | 5 ACK | Exact settlement acknowledgement, correlated response |
 | 6 HEARTBEAT | Capabilities, liveness |
 | 7 GOVERNANCE | Owner handover, authorized epoch installation |

@@ -1,6 +1,7 @@
 package wire
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"os"
@@ -93,6 +94,11 @@ func TestOperationVectorsFollowTheRealTransportReceiver(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	legacy, err := os.ReadFile(filepath.Join("..", "..", "tests", "vectors", "v0.6.0", "wire-operations.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyCorpus := bytes.Equal(data, legacy)
 	var output strings.Builder
 	rows := 0
 	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
@@ -123,8 +129,17 @@ func TestOperationVectorsFollowTheRealTransportReceiver(t *testing.T) {
 			if value, err := Key(decoded.Core()); err == nil {
 				key = &value
 			}
-			if strings.HasSuffix(row.ID, "/valid") && ReferenceAccepts(decoded.Core()) != row.ReferenceAccepts {
-				t.Fatalf("%s: reference operation set differs from the table", row.ID)
+			if strings.HasSuffix(row.ID, "/valid") {
+				expected := row.ReferenceAccepts
+				if legacyCorpus && row.ID == "Write/valid" {
+					if expected {
+						t.Fatal("the frozen v0.6.0 profile must refuse Write")
+					}
+					expected = true
+				}
+				if ReferenceAccepts(decoded.Core()) != expected {
+					t.Fatalf("%s: reference operation set differs from the table", row.ID)
+				}
 			}
 		}
 		if key != nil && row.Prior != nil {
@@ -169,7 +184,19 @@ func TestOperationVectorsFollowTheRealTransportReceiver(t *testing.T) {
 		}
 		output.Write(encoded)
 		output.WriteByte('\n')
-		if row.Expected != nil {
+		// These two v0.6.0 mutations now have exactly the QUERY/9 layout.
+		// The frozen corpus continues to record the original INVALID_FORMAT.
+		if legacyCorpus && (row.ID == "CurrentRead/opcode-above-family" || row.ID == "HistoricalRead/opcode-above-family") {
+			packetFields, err := fields(packet)
+			if err != nil || len(packetFields) != 2 || row.Expected == nil || row.Expected.Verdict != float64(70) || row.Expected.Retained != nil {
+				t.Fatalf("%s: unexpected historical fixture", row.ID)
+			}
+			if result.Verdict != "accept:first" || result.Retained == nil || *result.Retained != hex.EncodeToString(packetFields[0].data) ||
+				typedValue.decodedOperands.CommitmentQuery == nil ||
+				*typedValue.decodedOperands.CommitmentQuery != (CurrentCommitment{Session: 2, Revision: 2, Asset: 1, OriginDomain: 17}) {
+				t.Fatalf("%s: v0.6.1 did not admit the exact current commitment query", row.ID)
+			}
+		} else if row.Expected != nil {
 			var normalized operationExpected
 			if err := json.Unmarshal(encoded, &normalized); err != nil {
 				t.Fatal(err)

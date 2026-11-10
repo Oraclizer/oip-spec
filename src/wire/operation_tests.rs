@@ -119,18 +119,36 @@ fn operation_vectors_follow_the_real_transport_receiver() {
     let data = std::env::var_os("OIP_WIRE_OPERATIONS_INPUT")
         .map(|path| std::fs::read_to_string(path).unwrap())
         .unwrap_or_else(|| include_str!("../../tests/vectors/wire-operations.jsonl").into());
+    let legacy = include_str!("../../tests/vectors/v0.6.0/wire-operations.jsonl");
+    let legacy_corpus = data == legacy;
     let mut outputs = String::new();
     let mut rows = 0;
     for line in data.lines().filter(|line| !line.is_empty()) {
         let row: Value = serde_json::from_str(line).unwrap();
         let got = evaluate(&row);
         if let Some(expected) = row.get("expected") {
-            assert_eq!(&got["verdict"], &expected["verdict"], "{}", row["id"]);
-            assert_eq!(
-                &got["retained_binding"], &expected["retained_binding"],
-                "{}",
-                row["id"]
-            );
+            let id = row["id"].as_str().unwrap();
+            if legacy_corpus
+                && matches!(id, "CurrentRead/opcode-above-family" | "HistoricalRead/opcode-above-family")
+            {
+                // These v0.6.0 inputs carry four words and no blobs, the
+                // assigned CurrentCommitment layout in v0.6.1.
+                assert_eq!(expected["verdict"], json!(70), "{id}");
+                assert!(expected["retained_binding"].is_null(), "{id}");
+                let bytes = unhex(row["packet_hex"].as_str().unwrap());
+                let packet = decode_packet(&bytes, bytes.len()).unwrap();
+                assert!(matches!(
+                    crate::wire::operands::decode(packet.core(), 1),
+                    Ok(crate::wire::operands::Operands::CurrentCommitment {
+                        session: 2, revision: 2, asset: 1, origin_domain: 17,
+                    })
+                ), "{id}");
+                assert_eq!(got["verdict"], json!("accept:first"), "{id}");
+                assert_eq!(got["retained_binding"], hex(packet.core_bytes()), "{id}");
+            } else {
+                assert_eq!(got["verdict"], expected["verdict"], "{id}");
+                assert_eq!(got["retained_binding"], expected["retained_binding"], "{id}");
+            }
         }
         outputs.push_str(&got.to_string());
         outputs.push('\n');

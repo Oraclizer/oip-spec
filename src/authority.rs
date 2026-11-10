@@ -19,6 +19,7 @@ pub mod identity;
 pub mod reads;
 pub mod recovery;
 pub mod regulation;
+pub mod sync;
 use reads::ReadHistory;
 use regulation::RegulationState;
 
@@ -290,6 +291,8 @@ pub(crate) struct PrimarySnapshot {
     #[serde(with = "crate::authority::recovery::ordered_map")]
     owners: BTreeMap<AssetId, Principal>,
     journal: Vec<JournalItem>,
+    #[serde(default, skip_serializing_if = "sync::State::is_empty")]
+    sync: sync::State,
 }
 
 impl PrimarySnapshot {
@@ -362,6 +365,11 @@ impl PrimarySnapshot {
         self.journal.starts_with(&previous.journal)
             && previous.completed.is_subset(&self.completed)
             && previous.calls.iter().all(|(id, stored)| self.calls.get(id) == Some(stored))
+            && self.sync.preserves_calls(&previous.sync)
+    }
+
+    fn claimed(&self, id: CallId) -> bool {
+        self.calls.contains_key(&id) || self.regulation.claimed(id) || self.sync.claimed(id)
     }
 
     fn note_execution(&mut self, id: CallId, target: EndpointId, before: CommitCut) {
@@ -593,6 +601,7 @@ impl Authority {
             regulation: RegulationState::default(),
             owners: BTreeMap::new(),
             journal: Vec::new(),
+            sync: sync::State::default(),
         };
         let read_history = ReadHistory::new(&primary);
         Some(Self {
@@ -652,7 +661,7 @@ impl Authority {
         if !self.up {
             return Collection::Waiting;
         }
-        if self.state.primary.regulation.claimed(id) {
+        if self.state.primary.regulation.claimed(id) || self.state.primary.sync.claimed(id) {
             return Collection::Rejected;
         }
         if self.state.primary.calls.contains_key(&id) {
@@ -709,7 +718,10 @@ impl Authority {
         payload: &CallPayload,
         verify: impl FnOnce(AuthenticatedCaller, CallId, &CallPayload) -> bool,
     ) -> Collection {
-        if !self.access(actor, id, payload, verify) || self.state.primary.regulation.claimed(id) {
+        if !self.access(actor, id, payload, verify)
+            || self.state.primary.regulation.claimed(id)
+            || self.state.primary.sync.claimed(id)
+        {
             return Collection::Rejected;
         }
         if !self.up {
@@ -805,7 +817,7 @@ impl Authority {
     }
 
     pub fn outcome_count(&self) -> usize {
-        self.state.primary.calls.len()
+        self.state.primary.calls.len() + self.state.primary.sync.outcome_count()
     }
 
     #[cfg(test)]

@@ -25,18 +25,18 @@ def main():
         if result.returncode or ("test "+test+" ... ok").encode() not in result.stdout:raise ValueError("Actual source fixture did not run successfully: "+name)
     source=out/"source";ops=source/"original-operations";clients=source/"client-values"
     metadata=json.loads((ops/"scope.json").read_text(encoding="utf-8"))
-    if [metadata[key] for key in ["caller","noncaller","configured_refusal"]]!=[15,10,6]:raise ValueError("Original operation partition changed")
+    if [metadata[key] for key in ["caller","noncaller","configured_refusal"]]!=[17,11,5]:raise ValueError("Original operation partition changed")
     files={}
     for folder in [ops,clients]:
         for path in sorted(folder.iterdir()):
             if path.is_file():files[path.relative_to(out).as_posix()]={"sha256":sha(path),"bytes":path.stat().st_size}
     fp,_=runtime_source_hash(ROOT)
     receipt={"schema":"oip-full-wire-source-receipt-v1","status":"source-operation-and-client-fixtures-pass","runtime_source_hash":fp,
-        "operation_partition":{"caller":15,"noncaller":10,"configured_refusal":6},"current_client_cases":21,"scope":metadata,"files":files,"runs":runs,
+        "operation_partition":{"caller":17,"noncaller":11,"configured_refusal":5},"current_client_cases":21,"scope":metadata,"files":files,"runs":runs,
         "production_dispatcher_start_worker_executed":False,"actual_submit_wait_message_calls":True,"worker_body_text_identity_required":True,
         "independent_WitnessHead_Etcd_runtime":False,"model_executions":0,"full_message_correspondence":False}
     (out/"source-receipt.json").write_text(json.dumps(receipt,indent=2)+"\n",encoding="utf-8")
-    print(json.dumps({"status":receipt["status"],"partition":[15,10,6],"clients":21,"model_executions":0}))
+    print(json.dumps({"status":receipt["status"],"partition":[17,11,5],"clients":21,"model_executions":0}))
 if __name__=="__main__":
     try:main()
     except (ValueError,OSError,KeyError,subprocess.TimeoutExpired) as error:print(str(error),file=sys.stderr);raise SystemExit(2)

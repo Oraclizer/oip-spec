@@ -1,6 +1,6 @@
 # OIP v0.6 lock and finality rules
 
-This document is part of OIP v0.6.0. It defines the common checks for transfers and related lock operations. [Conformance scope](conformance.md) defines the requirement key words.
+This document is part of OIP v0.6.1. It defines the common checks for transfers and related lock operations. [Conformance scope](conformance.md) defines the requirement key words.
 
 ## Lock authority
 
@@ -9,6 +9,12 @@ This document is part of OIP v0.6.0. It defines the common checks for transfers 
 - A lock covers the requested asset and the dependencies designated by its authoritative lock context. Acquisition MUST reserve that entire footprint atomically. A lock-consuming request MUST match the current version of every recorded footprint member. A member that the request's version list omits is compared as version 0. Credit and Preempt do not check versions.
 - A lock's holder and the asset's owner are separate roles. Cancellation, fencing, and preemption MUST consume their own required permission at the current cut. Holding one role does not confer another role's permissions.
 - Before the source debit, Cancel of a held lock or Fence of a dispatched lock MAY end an obligation, since it prevents any later source effect for that binding. After the source debit, Cancel and Fence MUST be rejected, and Preempt MUST preserve the pending financial obligation and its recovery authority.
+
+## Write in the reference profile
+
+The reference accepts Write at LOCK_MANAGEMENT opcode 7. The operand layout and result code are specified in [Operations](operations.md). Before committing the write, the authority MUST check the signed current cut, the current caller's execution and exact value permission for the asset, the held reservation and current lock credential and generation, and the signed versions of the affected footprint. A reservation that has expired cannot authorize the write. A missing permission, wrong generation or mismatched version MUST leave the application value and its version unchanged.
+
+When these checks hold and the asset version can advance, the authority commits the requested value and the next asset version and records DATA_UPDATED with its commit position. The value, current observation and exact result are retained in the same authoritative history. The same authorized original call returns its retained result on retry, including after reopening the authority. A fresh request at an obsolete cut receives Busy. The existing admission and delivery rules apply before product execution.
 
 ## Reference source attestations
 

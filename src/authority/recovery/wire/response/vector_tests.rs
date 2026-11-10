@@ -21,8 +21,8 @@ fn duplicate_outcomes_carry_their_codes_and_the_original_commit() {
         assert_eq!(result.code as u64, number);
         assert_eq!(result.commit, Some(commit));
         // A duplicate is a recorded result and must name the original commit.
-        assert_eq!(ResponseStatus::decode(1, number, true), Ok(ResponseStatus::Known(code)));
-        assert_eq!(ResponseStatus::decode(1, number, false), Err(BAD));
+        assert_eq!(ResponseStatus::decode(1, number, true, false), Ok(ResponseStatus::Known(code)));
+        assert_eq!(ResponseStatus::decode(1, number, false, false), Err(BAD));
     }
 }
 
@@ -33,10 +33,10 @@ fn a_confiscation_without_a_destination_is_a_refusal_without_a_commit() {
     assert_eq!(result.code as u64, 37);
     assert_eq!(result.commit, None);
     assert_eq!(
-        ResponseStatus::decode(1, 37, false),
+        ResponseStatus::decode(1, 37, false, false),
         Ok(ResponseStatus::Known(ResponseCode::LegalMissingDestination))
     );
-    assert_eq!(ResponseStatus::decode(1, 37, true), Err(BAD));
+    assert_eq!(ResponseStatus::decode(1, 37, true, false), Err(BAD));
 }
 
 #[path = "boundary_value_tests.rs"]

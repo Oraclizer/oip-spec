@@ -207,6 +207,7 @@ fn receipt_origin(request: Request<'_>) -> OriginKey {
         Action::Ordinary(payload) => payload.binding.origin,
         Action::Legal { payload, .. } => payload.binding.origin,
         Action::Spend { payload, .. } => payload.scope.root.origin,
+        Action::SyncCommitment(call) => call.origin(),
     }
 }
 

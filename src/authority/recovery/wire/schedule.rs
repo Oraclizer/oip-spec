@@ -325,6 +325,7 @@ impl<S: WireSecurity, H: AuthenticatedHead> PersistentAuthority<S, H> {
                             &mut replay,
                             &core,
                             &operands,
+                            None,
                             Entry::Normal,
                             occurrence.credentials,
                             1,
