@@ -1155,7 +1155,7 @@ Checks:
 - decode: An original call has the call identifier (caller_namespace, call_sequence). When it is a Debit, a present commit position equals its revision. Otherwise INVALID_FORMAT.
 - decode: An original exact receipt query carries a call with the deployment, source domain, target domain, principal and authority epoch of that query and version 6. Otherwise INVALID_SOURCE.
 - decode: An original exact receipt query carries a call with the call identifier (caller_namespace, call_sequence). When that call is a Debit, a present commit position equals its revision. Otherwise INVALID_FORMAT.
-- decode: Codes 29, 39, 40 and 41 are recorded results of SyncCommitment. Code 29 carries a commit position and codes 39, 40 and 41 omit it. Otherwise INVALID_FORMAT.
+- decode: For an original SyncCommitment call, including one carried inside an exact receipt query, codes 29, 39, 40 and 41 have kind RECORDED. Code 29 carries a commit position and codes 39, 40 and 41 omit it. For responses to earlier operations, the same four numbers follow the unknown-code rules. Otherwise INVALID_FORMAT.
 - decode: When the original call is SyncCommitment, a known code has its declared kind and commit presence and is compatible with that call. Otherwise INVALID_FORMAT.
 - consumer: original_core equals the caller's retained canonical request and the call identifier equals that request's call identifier. Otherwise REPLAY_CONFLICT.
 

@@ -855,7 +855,7 @@
         {"when": "decode", "rule": "An original call has the call identifier (caller_namespace, call_sequence). When it is a Debit, a present commit position equals its revision.", "error": "INVALID_FORMAT"},
         {"when": "decode", "rule": "An original exact receipt query carries a call with the deployment, source domain, target domain, principal and authority epoch of that query and version 6.", "error": "INVALID_SOURCE"},
         {"when": "decode", "rule": "An original exact receipt query carries a call with the call identifier (caller_namespace, call_sequence). When that call is a Debit, a present commit position equals its revision.", "error": "INVALID_FORMAT"},
-        {"when": "decode", "rule": "Codes 29, 39, 40 and 41 are recorded results of SyncCommitment. Code 29 carries a commit position and codes 39, 40 and 41 omit it.", "error": "INVALID_FORMAT"},
+        {"when": "decode", "rule": "For an original SyncCommitment call, including one carried inside an exact receipt query, codes 29, 39, 40 and 41 have kind RECORDED. Code 29 carries a commit position and codes 39, 40 and 41 omit it. For responses to earlier operations, the same four numbers follow the unknown-code rules.", "error": "INVALID_FORMAT"},
         {"when": "decode", "rule": "When the original call is SyncCommitment, a known code has its declared kind and commit presence and is compatible with that call.", "error": "INVALID_FORMAT"},
         {"when": "consumer", "rule": "original_core equals the caller's retained canonical request and the call identifier equals that request's call identifier.", "error": "REPLAY_CONFLICT"}
       ],
