@@ -81,8 +81,8 @@ cargo +1.96.1 test --locked -- --list --ignored
 
 <div align="center">
   <picture>
-    <source media="(max-width: 900px)" srcset="docs/assets/architecture-overview-mobile.svg">
-    <img src="docs/assets/architecture-overview.svg" alt="Request path through OIP: a caller signs a version 6 request; Rust and Go receivers run nine ordered checks before any effect and return a typed refusal when one fails; the Rust state owner runs the operation and records the outcome; the caller verifies the signed response against the request it kept" width="900">
+    <source media="(max-width: 1121px)" srcset="docs/assets/architecture-overview-mobile.svg">
+    <img src="docs/assets/architecture-overview.svg" alt="Request path through OIP: a caller signs a version 6 request with Ed25519, as one signer or as a configured threshold group; Rust and Go receivers run nine ordered checks before any effect and return a typed refusal when one fails; the Rust state owner runs the operation and records the outcome; the caller verifies the signed response against the request it kept" width="900">
   </picture>
 </div>
 
@@ -132,8 +132,8 @@ same Core and requires the current registered quorum. See the
 
 <div align="center">
   <picture>
-    <source media="(max-width: 900px)" srcset="docs/assets/verification-architecture-mobile.svg">
-    <img src="docs/assets/verification-architecture.svg" alt="Isabelle/HOL theories, Rust source correspondence and exported models in Oraclizer/formal-verification connect to the specification and implementations here. The required CI check compares 692 transport inputs and 261 response inputs." width="900">
+    <source media="(max-width: 1121px)" srcset="docs/assets/verification-architecture-mobile.svg">
+    <img src="docs/assets/verification-architecture.svg" alt="Isabelle/HOL theories, Rust source correspondence and exported models in Oraclizer/formal-verification connect to the specification and implementations here. The required CI check compares 692 transport inputs, 261 response inputs and 22 threshold signature packets." width="900">
   </picture>
 </div>
 
@@ -144,22 +144,33 @@ three ways:
 
 - **Proofs about models.** Isabelle/HOL sessions model the product, the
   reference profile, record reopening, the recovery boundary and the message
-  interfaces. The v0.6.1 extension sessions add synchronization, Write and
-  their executable interfaces. Each theorem holds under the assumptions it names.
+  interfaces. The v0.6.1 and v0.6.2 extension sessions add synchronization,
+  Write, threshold signatures and further product, storage and message rules,
+  with their executable interfaces. Each theorem holds under the assumptions it
+  names.
 - **Source correspondence.** Named statements relate selected Rust operations
   to the models. They are maintained by hand; no tool derives them from the
   compiled code.
 - **Executable comparisons.** Models exported from the checked theories run
-  unedited in CI.
-  [`tests/model-artifact.lock.json`](tests/model-artifact.lock.json) pins each
-  exported file by SHA-256 and Git blob, and the required Tests result check
-  fails unless:
+  unedited in CI. Three lock files pin each exported file by SHA-256 and Git
+  blob: [`model-artifact.lock.json`](tests/model-artifact.lock.json) for the
+  typed transport model,
+  [`wire-response-artifact.lock.json`](tests/wire-response-artifact.lock.json)
+  for the full response model and
+  [`threshold-raw-artifact.lock.json`](tests/threshold-raw-artifact.lock.json)
+  for the threshold signature step. The required Tests result check fails
+  unless:
   - Rust, Go and the typed transport model agree on all seven recorded fields
     for 692 inputs, 180 fixed and 512 seeded
     ([wire value comparison](tests/wire-values.md));
   - Rust and the full response model agree on 261 inputs: 33 original
     operations, 207 typed results and 21 client inputs
-    ([response comparison](tests/full-response-consumer.md)).
+    ([response comparison](tests/full-response-consumer.md));
+  - Rust, Go and the checked threshold signature step agree on 22 THRESHOLD
+    packets: the verdict, the selected group, the signers, the Core and the
+    signing preimage. The attestation and binding effects of these packets
+    are checked separately, against a fixed rule in the comparison script
+    ([threshold comparison](scripts/check-threshold-raw.py)).
 
 In the other direction,
 [`consumer-binding.json`](https://github.com/Oraclizer/formal-verification/blob/main/Oracle_Interoperability_Protocol/consumer-binding.json)
@@ -197,6 +208,7 @@ providers remain assumptions.
 | Operation conformance | `python3 scripts/check-operations.py` | Rust, Go and the pinned typed model agree on all seven recorded fields across 692 inputs. Missing or stale model inputs fail the check. |
 | Signed interoperation | `python3 scripts/test-wire-interop.py` | Rust and Go exchange signed frames, including execution at the Rust persistent authority |
 | Response comparison | `python3 scripts/check-response-boundary.py` after the source runs in [`tests.yml`](.github/workflows/tests.yml) | Rust's signed responses and client results agree with the pinned full response model on 261 inputs |
+| Threshold signature comparison | `python3 scripts/check-threshold-raw.py` with the Poly/ML runtime and output folder used in [`tests.yml`](.github/workflows/tests.yml) | Rust and Go receive 22 THRESHOLD packets with the same verdict, selected group, signers, Core and signing preimage as the pinned checked signature step |
 | Repository health | `node .github/scripts/verify-repository-health.mjs` | Links, vector checksums, workflow pins and public-text rules hold |
 | Formal models | [Proof source and scope](https://github.com/Oraclizer/formal-verification/tree/main/Oracle_Interoperability_Protocol) | The proof repository lists the Isabelle/HOL sessions and each theorem's assumptions. |
 
@@ -239,7 +251,7 @@ establish:
 | `src/` | Rust reference: product boundary, message layer, recovery and handover profiles |
 | `examples/wire_corpus.rs` | Prints the signed message corpus used to compare Rust and Go |
 | `go/` | Go message layer: byte checks, admission, operands, the v0.5 compatibility codec and a corpus generator |
-| `tests/` | Shared test vectors with SHA-256 checksum files, the pinned model lock and the contract of each model comparison |
+| `tests/` | Shared test vectors with SHA-256 checksum files, the pinned model locks and the model comparison contracts |
 | `scripts/` | Binding generation, operation-table rendering, the Rust and Go exchange and the model comparisons |
 | `docs/assets/` | README banner, diagrams and social preview |
 | `.github/` | Workflows, the repository health checker, and issue and pull request templates |
