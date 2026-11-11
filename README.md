@@ -170,7 +170,7 @@ three ways:
     packets: the verdict, the selected group, the signers, the Core and the
     signing preimage. The attestation and binding effects of these packets
     are checked separately, against a fixed rule in the comparison script
-    ([threshold comparison](scripts/check-threshold-raw.py)).
+    ([threshold comparison](tests/threshold-raw.md)).
 
 In the other direction,
 [`consumer-binding.json`](https://github.com/Oraclizer/formal-verification/blob/main/Oracle_Interoperability_Protocol/consumer-binding.json)
@@ -236,6 +236,7 @@ establish:
 | [Response code allocation](spec/response-code-extension.md) | Assignments, compatibility and retry rules for new results |
 | [Lock and finality rules](spec/lock-finality.md) | Lock ownership, source attestations, pending amounts and terminal evidence |
 | [Identity and ownership handover](spec/identity-handover.md) | Caller and endpoint identity, Ed25519 reference keys, owner and session handover |
+| [Threshold envelope signatures](spec/threshold-signatures.md) | Current group selection, the scheme 2 signature field, admission and retries |
 | [Persistence and recovery](spec/persistent-recovery.md) | Durable commits, the etcd control transport, archive selection, retained results and unresolved effects |
 | [Outcomes and publication](spec/authoritative-outcomes.md) | Call identity and completion, consumption of original events, publication and settlement |
 | [Current and historical reads](spec/current-and-historical-reads.md) | Current and historical observations |

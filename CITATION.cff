@@ -11,6 +11,7 @@ abstract: >-
   generated from one schema and run against shared vectors.
 type: software
 version: "0.6.2"
+date-released: "2026-11-11"
 license: Apache-2.0
 authors:
   - family-names: "Kim"

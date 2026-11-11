@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Published documentation
-    url: https://docs.oraclizer.io/oip-v05/oip-overview/
-    about: The published OIP v0.5 documentation
+    url: https://docs.oraclizer.io/oip-v06/oip-overview/
+    about: The published OIP v0.6 documentation
   - name: Private security report
     url: https://github.com/Oraclizer/oip-spec/blob/main/SECURITY.md
     about: Follow the private reporting policy; do not disclose vulnerabilities in a public issue

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
 <title id="title">OIP: Oracle Interoperability Protocol</title>
-<desc id="desc">v0.6.0 prototype. specification / Rust reference / Go bindings.</desc>
+<desc id="desc">v0.6 prototype. specification / Rust reference / Go message layer.</desc>
 <defs>
   <linearGradient id="background" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060b18"/><stop offset=".62" stop-color="#0a1430"/><stop offset="1" stop-color="#0c1a3d"/></linearGradient>
   <linearGradient id="field-a" x1="112" y1="0" x2="368" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8cc0ff"/><stop offset="1" stop-color="#2f74f0"/></linearGradient>
@@ -98,7 +98,7 @@
 <text x="516" y="263" fill="#f2f5fb" font-size="112" font-weight="700">OIP</text>
 <text x="520" y="329" fill="#bccbe6" font-size="31" font-weight="400">Oracle Interoperability Protocol</text>
 <rect x="520" y="361" width="70" height="5" rx="2.5" fill="#e8b660" opacity="1"/>
-<text x="520" y="413" fill="#f2c16e" font-size="27" font-weight="400">v0.6.0 prototype</text>
-<text x="520" y="480" fill="#98a6c0" font-size="22" font-weight="400">specification / Rust reference / Go bindings</text>
+<text x="520" y="413" fill="#f2c16e" font-size="27" font-weight="400">v0.6 prototype</text>
+<text x="520" y="480" fill="#98a6c0" font-size="22" font-weight="400">specification / Rust reference / Go message layer</text>
 </g>
 </svg>

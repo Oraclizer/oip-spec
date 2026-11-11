@@ -118,7 +118,8 @@ separate from the normal wire release condition.
 ## Typed value ABI
 
 The typed interface is described in [wire-values.md](wire-values.md).
-It uses `code_typed_model_identity ()`, not the old accept-only identity.
+It uses `OIP_Wire_Oracle_V061.sync_v061_typed_model_identity ()`, not the old
+accept-only identity.
 The exact typed values/core/preimage/key must all be produced by the exported
 model. A verdict/binding-only model output is incomplete metadata.
 The bound `public_namespace`, content and source pins identify the checked

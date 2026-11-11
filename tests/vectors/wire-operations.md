@@ -37,7 +37,8 @@ retained bytes, not only the number of stored keys.
 `id`, `family`, `opcode`, `reference_accepts`, `seed` and `expected` are test
 metadata and must not be inputs to a proof-model decision. The normal
 transport receiver accepts every negotiated operation; the reference
-configuration's 25-operation filter is checked separately against the table.
+configuration's operation filter (28 of the 33 operations when both
+commitment operations are enabled) is checked separately against the table.
 
 The fixed cases specify their expected outcomes in the generator. The random
 cases retain the agreed Rust/Go outcomes as regression data. Agreement between
