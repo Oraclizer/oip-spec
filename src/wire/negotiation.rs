@@ -128,8 +128,7 @@ pub fn confirmation_bytes(local: &Offer, remote: &Offer, profile: &Profile) -> V
     out
 }
 
-pub(crate) fn verify(key: &[u8; 32], bytes: &[u8], signature: &[u8]) -> bool {
-    fn canonical_point(point: &[u8]) -> bool {
+fn canonical_point(point: &[u8]) -> bool {
         let Some(mut y) = <[u8; 32]>::try_from(point).ok() else {
             return false;
         };
@@ -138,7 +137,14 @@ pub(crate) fn verify(key: &[u8; 32], bytes: &[u8], signature: &[u8]) -> bool {
         prime[0] = 237;
         prime[31] = 127;
         y.iter().rev().cmp(prime.iter().rev()).is_lt()
-    }
+}
+
+pub(crate) fn valid_public_key(key: &[u8; 32]) -> bool {
+    canonical_point(key)
+        && VerifyingKey::from_bytes(key).is_ok_and(|key| !key.is_weak())
+}
+
+pub(crate) fn verify(key: &[u8; 32], bytes: &[u8], signature: &[u8]) -> bool {
     if !canonical_point(key) || !signature.get(..32).is_some_and(canonical_point) {
         return false;
     }

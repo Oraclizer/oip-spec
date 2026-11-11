@@ -8,6 +8,7 @@ pub mod legacy;
 pub mod negotiation;
 pub mod operands;
 pub mod source_attestation;
+pub mod threshold;
 
 #[cfg(test)]
 mod interop_tests;

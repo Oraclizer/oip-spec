@@ -6,6 +6,7 @@ use crate::wire::operands::decode;
 mod signing_vectors;
 mod sync_tests;
 mod write_tests;
+mod threshold_tests;
 
 fn key(seed: u8) -> SigningKey {
     SigningKey::from_bytes(&[seed; 32])

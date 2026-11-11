@@ -212,12 +212,19 @@ func checkScope(core *wirepb.Core, profile Profile, boundary Boundary, version u
 }
 
 func AdmitPacket(packet *CanonicalPacket, profile Profile, boundary Boundary) error {
+	return admitPacket(packet, profile, boundary, nil)
+}
+
+func admitPacket(packet *CanonicalPacket, profile Profile, boundary Boundary, rosters []ThresholdRoster) error {
 	core := packet.packet.Core
 	if err := checkScope(core, profile, boundary, 6); err != nil {
 		return err
 	}
 	if core.GetSignatureScheme() == 2 {
-		return ErrThreshold
+		if !slices.Contains(profile.Schemes, uint64(2)) || !verifyThreshold(packet, boundary, rosters) {
+			return ErrThreshold
+		}
+		return nil
 	}
 	preimage, err := packet.SigningBytes()
 	if err != nil || !slices.Contains(profile.Schemes, core.GetSignatureScheme()) ||

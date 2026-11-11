@@ -127,6 +127,9 @@ func (store *TransportBindings) ReceiveVersioned(raw []byte, channel Channel, bo
 	}
 	switch channel.profile.Version {
 	case 6:
+		if channel.keys[1] != boundary.PublicKey {
+			return First, nil, ErrSource
+		}
 		arrival, packet, err := store.Receive(raw, channel.profile, boundary, attest)
 		if err != nil {
 			return First, nil, err

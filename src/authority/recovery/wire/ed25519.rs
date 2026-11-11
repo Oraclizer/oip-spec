@@ -14,7 +14,8 @@ use crate::authority::regulation::{
 };
 use crate::authority::{Acknowledgement, CallPayload};
 use crate::lock_finality::{Command, TerminalEvidence};
-use crate::wire::admission::Boundary;
+use crate::wire::admission::{Boundary, check_signature};
+use crate::wire::threshold::ThresholdRoster;
 use crate::wire::codec::{WireError, decode_core, decode_packet, encode_core};
 use crate::wire::generated::{Core, core::Body};
 use crate::wire::negotiation::Channel;
@@ -128,6 +129,36 @@ pub struct Ed25519Profile {
     pub max_delivery_ttl_seconds: Option<u64>,
     #[serde(default, skip_serializing_if = "source::SyncPolicy::is_empty")]
     pub sync: source::SyncPolicy,
+}
+
+/// Explicit current envelope policy. Existing SINGLE profile literals and
+/// serialized profiles stay valid; an empty roster preserves their identity.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct ConfiguredEd25519Profile {
+    #[serde(flatten)]
+    pub single: Ed25519Profile,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub threshold_rosters: Vec<ThresholdRoster>,
+}
+
+impl<'de> Deserialize<'de> for ConfiguredEd25519Profile {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // Deserialize the JSON object directly: serde's flattened intermediate
+        // map otherwise loses numeric-key decoding for existing peer maps.
+        let mut value = serde_json::Value::deserialize(deserializer)?;
+        let object = value.as_object_mut().ok_or_else(|| serde::de::Error::custom("expected profile object"))?;
+        let threshold_rosters = object.remove("threshold_rosters")
+            .map(serde_json::from_value).transpose().map_err(serde::de::Error::custom)?
+            .unwrap_or_default();
+        let single = serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+        Ok(Self { single, threshold_rosters })
+    }
+}
+
+impl From<Ed25519Profile> for ConfiguredEd25519Profile {
+    fn from(single: Ed25519Profile) -> Self {
+        Self { single, threshold_rosters: Vec::new() }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -247,6 +278,7 @@ impl MaintenanceIssuer {
 /// the profile fingerprint, and this handle is not returned by request APIs.
 pub struct Ed25519Security<C> {
     config: Ed25519Profile,
+    threshold_rosters: Vec<ThresholdRoster>,
     binding: [u8; 32],
     next: Option<handover::SuccessorPolicy>,
     response_key: SigningKey,
@@ -259,12 +291,22 @@ impl<C: AuthorityClock> Ed25519Security<C> {
         response_key: SigningKey,
         clock: C,
     ) -> Result<Self, WireError> {
+        Self::new_configured(config.into(), response_key, clock)
+    }
+
+    pub fn new_configured(
+        configured: ConfiguredEd25519Profile,
+        response_key: SigningKey,
+        clock: C,
+    ) -> Result<Self, WireError> {
+        let binding = configured_policy_binding(&configured)?;
+        let ConfiguredEd25519Profile { single: config, threshold_rosters } = configured;
         if response_key.verifying_key().to_bytes() != config.response_key {
             return Err(INVALID);
         }
-        let binding = authority_policy_binding(&config)?;
         Ok(Self {
             config,
+            threshold_rosters,
             binding,
             next: None,
             response_key,
@@ -374,6 +416,37 @@ fn authority_policy_binding(config: &Ed25519Profile) -> Result<[u8; 32], WireErr
         return Err(INVALID);
     }
     Ok(Sha256::digest(preimage(b"oip/reference-authority-policy/v1\0", config)?).into())
+}
+
+fn configured_policy_binding(configured: &ConfiguredEd25519Profile) -> Result<[u8; 32], WireError> {
+    let config = &configured.single;
+    let original = authority_policy_binding(config)?;
+    if configured.threshold_rosters.is_empty() {
+        return Ok(original);
+    }
+    let mut scopes = BTreeSet::new();
+    for roster in &configured.threshold_rosters {
+        if !roster.valid()
+            || roster.deployment != config.profile.deployment
+            || roster.epoch != config.authority_epoch
+            || !config.peers.get(&roster.principal).is_some_and(|peer| peer.identity.domain == roster.source)
+            || !scopes.insert((roster.deployment, roster.source, roster.principal, roster.key_id, roster.epoch))
+        {
+            return Err(INVALID);
+        }
+    }
+    Ok(Sha256::digest(preimage(b"oip/reference-threshold-policy/v1\0", &(original, &configured.threshold_rosters))?).into())
+}
+
+fn verify_registered_envelope(
+    packet: &crate::wire::codec::CanonicalPacket,
+    peer: &PeerRegistration,
+    rosters: &[ThresholdRoster],
+) -> bool {
+    let checked = check_signature(packet, &BTreeSet::from([1, 2]), &peer.public_key, rosters);
+    #[cfg(test)] crate::wire::threshold::trace::record("authority-envelope", packet, rosters, &checked);
+    (packet.core().signature_scheme == Some(2) || packet.core().key_id == Some(peer.key_id))
+        && checked.is_ok()
 }
 
 fn permits(grant: &EndpointGrant, operation: Operation, scope: Scope) -> bool {
@@ -649,13 +722,9 @@ impl<C: AuthorityClock> Security for Ed25519Security<C> {
             || core.source_domain != Some(identity.domain)
             || core.target_domain != Some(target)
             || core.principal != Some(identity.principal)
-            || core.key_id != Some(peer.key_id)
             || core.authority_epoch != Some(proof.epoch)
             || core.route_scope != Some(self.config.route_scope)
-            || core.signature_scheme != Some(1)
-            || !packet.signing_bytes().is_ok_and(|preimage| {
-                verify_strict(&peer.public_key, &preimage, packet.signature())
-            })
+            || !verify_registered_envelope(&packet, peer, &self.threshold_rosters)
         {
             return false;
         }
@@ -917,7 +986,7 @@ impl<C: AuthorityClock> Security for Ed25519Security<C> {
         maintenance::verify_time(self, actor, cut, observed, signature)
     }
     fn verify_ack(&self, acknowledgement: &Acknowledgement, signature: &Vec<u8>) -> bool {
-        ack::verify_ack(&self.config, acknowledgement, signature)
+        ack::verify_ack(&self.config, &self.threshold_rosters, acknowledgement, signature)
     }
     fn approve(&self, identity: Identity, proposal: &Handover, signature: &Vec<u8>) -> bool {
         self.verify_consent(identity, proposal, signature)
@@ -925,6 +994,21 @@ impl<C: AuthorityClock> Security for Ed25519Security<C> {
 }
 
 impl<C: AuthorityClock> WireSecurity for Ed25519Security<C> {
+    fn threshold_rosters(&self) -> &[ThresholdRoster] {
+        &self.threshold_rosters
+    }
+
+    fn verify_original_signature(&self, channel: &Channel, packet: &crate::wire::codec::CanonicalPacket) -> Result<(), WireError> {
+        if packet.core().signature_scheme == Some(2)
+            && !packet.core().principal.and_then(|id| self.config.peers.get(&id)).is_some_and(|peer| {
+                peer.identity.domain == channel.remote() && peer.public_key == channel.peer_keys()[1]
+            })
+        {
+            return Err(WireError::InvalidThresholdSignature);
+        }
+        check_signature(packet, &channel.profile().schemes, &channel.peer_keys()[1], &self.threshold_rosters)
+    }
+
     fn channel_current(&self, channel: &Channel) -> bool {
         channel.profile().version == 6
             && channel.deployment() == self.config.profile.deployment
@@ -966,7 +1050,7 @@ impl<C: AuthorityClock> WireSecurity for Ed25519Security<C> {
             source: channel.remote(),
             target: channel.local(),
             principal,
-            key_id: peer.key_id,
+            key_id: if core.signature_scheme == Some(2) { core.key_id? } else { peer.key_id },
             epoch: live.authority_epoch,
             route_scope: self.config.route_scope,
             now: self.clock.unix_seconds()?,

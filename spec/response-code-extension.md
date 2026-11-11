@@ -1,6 +1,6 @@
 # OIP v0.6 response code allocation
 
-This document is part of OIP v0.6.1. [Wire conformance](wire-conformance.md) defines response validation, effects and retry behavior. [Operations](operations.md) defines recorded code compatibility for each call.
+This document is part of OIP v0.6.2. [Wire conformance](wire-conformance.md) defines response validation, effects and retry behavior. [Operations](operations.md) defines recorded code compatibility for each call.
 
 A version 6 response code is assigned at most once. An addition MUST preserve every existing code, its response kind, commit presence, compatible call types, effect and retry behavior. An assignment MUST include a fixed kind and commit presence, the effect and retry rule, and the closest v0.5 correspondence or a statement that there is no equivalent. The operation table, its rendered view, the wire text and both implementations MUST agree on each assignment.
 

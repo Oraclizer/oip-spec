@@ -9,17 +9,18 @@ use crate::authority::regulation::{LegalReply, LegalStage, Refusal, SpendReply};
 use crate::authority::sync;
 use crate::authority::{Collection, CommitRef, Outcome, OutcomeReply};
 use crate::lock_finality::{Command, Reply, TerminalKind};
-use crate::wire::admission::{Boundary, admit_packet};
+use crate::wire::admission::{Boundary, admit_packet, admit_packet_configured};
 use crate::wire::codec::{
     CanonicalPacket, WireError, check_declared_version, decode_packet, encode_core,
     encode_packet, signing_bytes,
 };
 use crate::wire::generated::{Core, Operation, Packet, core::Body};
-use crate::wire::negotiation::{Channel, verify};
+use crate::wire::negotiation::Channel;
 use crate::wire::operands::{Operands, decode, decode_before_response_status};
 use sha2::{Digest, Sha256};
 
 const BAD: WireError = WireError::InvalidFormat;
+const RESPONSE_SCHEME: u64 = 1;
 
 macro_rules! response_codes {
     ($($code:ident => ($kind:literal, $number:literal, $commit:literal)),+ $(,)?) => {
@@ -492,6 +493,16 @@ pub fn admit_response(
     expected: &CanonicalPacket,
     response: &[u8],
 ) -> Result<VerifiedResponse, WireError> {
+    admit_response_configured(channel, boundary, &[], expected, response)
+}
+
+pub fn admit_response_configured(
+    channel: &Channel,
+    boundary: &Boundary,
+    rosters: &[crate::wire::threshold::ThresholdRoster],
+    expected: &CanonicalPacket,
+    response: &[u8],
+) -> Result<VerifiedResponse, WireError> {
     if channel.local() != boundary.target
         || channel.remote() != boundary.source
         || channel.deployment() != boundary.deployment
@@ -502,7 +513,9 @@ pub fn admit_response(
     }
     check_declared_version(response, boundary.max_frame)?;
     let response = decode_packet(response, boundary.max_frame)?;
-    admit_packet(&response, channel.profile(), boundary)?;
+    let admitted = admit_packet_configured(&response, channel.profile(), boundary, rosters);
+    #[cfg(test)] crate::wire::threshold::trace::record("inbound-response", &response, rosters, &admitted);
+    admitted?;
     validate_response(&response, expected, boundary.max_nesting)
 }
 
@@ -555,7 +568,7 @@ fn response_core(
         family: Some(5),
         primary: Some(1),
         secondary: None,
-        signature_scheme: Some(1),
+        signature_scheme: Some(RESPONSE_SCHEME),
         atomicity: Some(atomicity),
         priority: Some(3),
         route_scope: Some(params.route_scope),
@@ -613,23 +626,12 @@ fn largest_response_len(channel: &Channel, original: &CanonicalPacket) -> Result
 /// Verify the signature of a received original with the peer key that the
 /// channel authenticated, before any answer about the frame is signed. A frame
 /// that fails here receives only an unsigned error. The check reads the frame
-/// and the channel key, and no registration of the principal, key or epoch
-/// that the frame names, so the error cannot reveal that registration.
-fn check_original_signature(channel: &Channel, original: &CanonicalPacket) -> Result<(), WireError> {
-    let scheme = original.core().signature_scheme.ok_or(BAD)?;
-    if scheme == 2 {
-        return Err(WireError::InvalidThresholdSignature);
-    }
-    if !channel.profile().schemes.contains(&scheme)
-        || !verify(
-            &channel.peer_keys()[1],
-            &original.signing_bytes()?,
-            original.signature(),
-        )
-    {
-        return Err(WireError::InvalidSignature);
-    }
-    Ok(())
+/// and the channel key for SINGLE. THRESHOLD additionally selects the current
+/// trusted registration. No error is signed before that envelope verifies.
+fn check_original_signature<S: WireSecurity>(security: &S, channel: &Channel, original: &CanonicalPacket) -> Result<(), WireError> {
+    let checked = security.verify_original_signature(channel, original);
+    #[cfg(test)] crate::wire::threshold::trace::record("response-original", original, security.threshold_rosters(), &checked);
+    checked
 }
 
 fn encode_response(
@@ -707,7 +709,9 @@ impl<S: WireSecurity, H: AuthenticatedHead> PersistentAuthority<S, H> {
         channel: &Channel,
         bytes: &[u8],
     ) -> Result<(CanonicalPacket, CallId), WireError> {
-        if channel.profile().version != 6 || !channel.profile().allows(5, 2) {
+        let profile = channel.profile();
+        // This responder emits SINGLE ACK/2. Check that it can respond before executing or closing a call.
+        if profile.version != 6 || !profile.allows(5, 2) || !profile.schemes.contains(&RESPONSE_SCHEME) {
             return Err(WireError::UnsupportedVersion);
         }
         if self.anchor.ordered_wire_control().is_none()
@@ -736,9 +740,9 @@ impl<S: WireSecurity, H: AuthenticatedHead> PersistentAuthority<S, H> {
         if largest_response_len(channel, &original)? > frame_limit {
             return Err(WireError::InvalidFormat);
         }
-        // Every check above reads only the frame and the channel. Nothing is
-        // signed for a frame whose own signature does not verify.
-        check_original_signature(channel, &original)?;
+        // Nothing is signed for a frame whose own signature does not verify
+        // under the channel key or the current configured threshold roster.
+        check_original_signature(self.security.as_ref(), channel, &original)?;
         Ok((original, id))
     }
 

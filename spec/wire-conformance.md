@@ -1,6 +1,6 @@
 # OIP v0.6 canonical message and version profiles
 
-This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines the requirement key words and separates the protocol core from the reference profile.
+This document is part of OIP v0.6.2. [Conformance scope](conformance.md) defines the requirement key words and separates the protocol core from the reference profile.
 
 ## Version coexistence
 
@@ -29,7 +29,7 @@ This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines
 - Preserve the absent deadline, the indefinite deadline and the finite deadline as separate forms on the wire ([deadline modes](operations.md#deadline-modes)). In this version the product gives the absent and the indefinite forms the same meaning: no appeal deadline. Strings use validated UTF-8 and canonical ordering by bytes for sets and maps, with sequence order preserved. Transport UUIDs are 16 bytes and unsigned 256-bit integers have one fixed 32-byte big-endian representation. Product bindings use checked range conversion before effects. Reject malformed lengths and out-of-profile scope rather than truncating values. The maximum frame size and nesting depth are configuration values of the receiving host. A frame larger than the configured maximum MUST be refused as INVALID_FORMAT. Only complete canonical frames enter the validator.
 - The immutable origin signing input is ASCII OIP followed by NUL, ASCII ENVELOPE followed by NUL, four big-endian bytes of core length, and the canonical core. Derive it from the authoritative fields and sign the exact bytes. Negotiation uses its own binary signing inputs, and the reference token, policy and source records use the signing inputs in [JSON encodings](json-encodings.md). Verify the scheme and signature with the current authenticated source key and scope.
 - SINGLE uses Ed25519 (RFC 8032) with a 32-byte public key and a 64-byte signature. A verifier MUST reject a SINGLE signature unless the public key and the first 32 bytes of the signature (R) are canonical point encodings, with the y coordinate below 2^255 - 19, of points that are not of small order, the last 32 bytes (S) encode an integer below the group order, and the equation [S]B = R + [k]A holds without cofactor multiplication.
-- THRESHOLD (scheme 2) has no verifier in this version. The reference has no THRESHOLD adapter and refuses every scheme 2 frame as INVALID_THRESHOLD_SIGNATURE, with no fallback. A THRESHOLD adapter MUST enforce exact current distinct authorized signers and a trusted quorum. With no such adapter in the reference, this requirement cannot be tested against it.
+- THRESHOLD (scheme 2) uses the receiver's current registered group and a sorted list of independently verified Ed25519 signatures. [Threshold envelope signatures](threshold-signatures.md) defines the signature field and the configured verifier.
 
 ## Admission, replies and retry
 
@@ -48,7 +48,7 @@ This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines
 ## Refusals before signature verification
 
 - A receiver MUST NOT sign a response to a frame whose own signature it has not verified. A refusal before that verification is an unsigned error.
-- The Rust reference response-generation path checks the original's signature with the peer key of the negotiated channel before it signs anything. Checks of the original before that verification read only the frame and the channel, so these unsigned errors do not disclose registration of the principal, key identifier or authority epoch named by the original.
+- The Rust reference response-generation path verifies the original before signing an answer. For SINGLE it uses the peer key authenticated by the channel. For THRESHOLD it binds the original principal to that channel and verifies the current registered quorum. A refusal before this verification is unsigned.
 - The reference returns request-admission refusals to its local host as error values. Its ordinary request path can select a boundary, check delivery and cancellation, and refuse INVALID_SOURCE before verifying the envelope signature. This version does not provide registration privacy for those local errors. An unsigned error MUST NOT be treated as an authenticated response or as evidence of a product effect.
 
 ## Refusal precedence
@@ -82,7 +82,7 @@ the generic Rust and Go receivers have no such configured operation set.
 | 3 | When a configured operation predicate is present, it accepts the decoded operation; otherwise UNSUPPORTED_VERSION. |
 | 4 | The negotiated version, version floor, family and atomicity fit; otherwise UNSUPPORTED_VERSION. The purpose, deployment, endpoints, principal, key, epoch, route scope and critical authority fit the boundary; otherwise INVALID_SOURCE. |
 | 5 | Effective TTL and allowed future time do not overflow, and the issued time is within the future-skew bound; otherwise TTL_INVALID. The effective expiry has not passed; otherwise TtlExpired (54). |
-| 6 | A scheme 2 signature receives INVALID_THRESHOLD_SIGNATURE. Otherwise the scheme is selected and the exact envelope signature verifies; a failure receives INVALID_SIGNATURE. |
+| 6 | Verify the exact envelope under its selected scheme. A SINGLE failure receives INVALID_SIGNATURE. A THRESHOLD failure at this step receives INVALID_THRESHOLD_SIGNATURE. |
 | 7 | The independent `attest` callback accepts the Core; otherwise INVALID_SOURCE. |
 | 8 | The operation operands decode within `max_nesting`, returning the decoder's first layout or correlation error. |
 | 9 | Derive the transport key and compare its retained exact Core. Different retained bytes receive REPLAY_CONFLICT. An absent binding becomes First and equal bytes become Identical. |
@@ -133,7 +133,7 @@ Before `receive_wire_response` executes a call, `response_original` uses the
 following sequence. `resolve_wire_debit_response` uses the same preparation
 before its exact-resolution API.
 
-1. Require a version 6 channel that selects the ACK response family; otherwise
+1. Require a version 6 channel that selects the ACK response family and negotiates SINGLE; otherwise
    UNSUPPORTED_VERSION.
 2. Require ordered control, the matching revocation profile, a current channel
    and the matching deployment; otherwise INVALID_SOURCE.
@@ -147,9 +147,10 @@ before its exact-resolution API.
 6. Select a negotiated response atomicity and encode the largest response
    shape for the original. No selected atomicity receives UNSUPPORTED_VERSION;
    an encoding or size failure receives INVALID_FORMAT.
-7. Check scheme 2 as INVALID_THRESHOLD_SIGNATURE; otherwise verify the original
-   envelope with the channel's authenticated remote key and selected scheme.
-   A signature failure receives INVALID_SIGNATURE.
+7. Verify the exact original envelope under its configured scheme. SINGLE uses
+   the channel's authenticated remote key. THRESHOLD uses the current group
+   selected for the original. A failure receives the corresponding signature
+   refusal code.
 8. Require the host response signer, then enter persistent request admission or
    exact Debit resolution. Convert its returned outcome to a Response result,
    and encode and sign that result.
@@ -181,15 +182,15 @@ Examples of combined failures:
 | --- | --- |
 | Transport receive: a within-limit complete Core declares version 7 and carries a later unknown field | UNSUPPORTED_VERSION, because the version selector succeeds before canonical decoding |
 | Transport receive: the supplied principal differs from the boundary and the envelope signature is invalid | INVALID_SOURCE, from the scope check |
-| Transport receive: an invalid envelope signature and an invalid operand tail | INVALID_SIGNATURE, before operand decoding |
+| Transport receive: an invalid envelope signature and an invalid operand tail | INVALID_SIGNATURE for SINGLE or INVALID_THRESHOLD_SIGNATURE for canonical THRESHOLD, before operand decoding |
 | Signed Response preparation: a validly framed accepted call has an invalid operand tail and an invalid envelope signature | The operand decoder's error, before the original-signature check; the error is unsigned |
 | Signed Response verification: the installed channel/boundary comparison fails and the response bytes are malformed | INVALID_SOURCE, before Packet decoding |
 
 ## Reference outbound Response
 
-The reference authority signs an ACK family operation with opcode 2 after its ordinary receive or exact Debit resolution returns. Its words are the original caller namespace, call sequence, kind, result code, and commit presence, followed by the commit position when present. The only blob is the original canonical Core in its original bytes. The operation has no deadline. The response uses the current configured local issuer, reverses source and target domains, and signs the canonical response Core with the negotiated local Ed25519 key and the envelope signing domain. A response UUID can be reused only for identical response bytes.
+The reference authority signs an ACK family operation with opcode 2 after its ordinary receive or exact Debit resolution returns. Its words are the original caller namespace, call sequence, kind, result code, and commit presence, followed by the commit position when present. The only blob is the original canonical Core in its original bytes. The operation has no deadline. The response uses the current configured local issuer, reverses source and target domains, and signs the canonical response Core with the negotiated local SINGLE Ed25519 key and the envelope signing domain. A response UUID can be reused only for identical response bytes. A channel that did not negotiate SINGLE receives unsigned UNSUPPORTED_VERSION from the Rust signed response entry points before any request is executed or closed. This check does not restrict the ordinary receive API.
 
-The Rust reference response verifier uses the caller's retained canonical original and the current peer policy. It checks the signature, exact original Core, caller-qualified ID, kind, code, request compatibility and commit presence. The boundary's verification key MUST equal the peer key authenticated by the channel; a mismatch receives INVALID_SOURCE. This response path applies the canonical version selector and returns UNSUPPORTED_VERSION for another declared version before canonical decoding. For Debit the commit position is the ledger revision of the original signed cut. Duplicated terminal decisions or settlements use the commit reference in the retained outcome. The reference path handles native calls with a caller-qualified ID. An unidentifiable or noncanonical input produces a transport error without an invented call identifier. The reference signs a response only for an original whose signature verifies with the channel's peer key. An original with an invalid signature receives an unsigned error and no response. Before executing a request, the reference encodes the largest response shape for that original Core, including a commit position and a 64-byte signature. If this exceeds the configured frame limit, the request receives INVALID_FORMAT before any effect. A timeout can be followed by an exact authorized resolution for a delivery status or the durable outcome. Go decodes response operands and their correlation fields but does not implement this signature-checked response-verifier API.
+The Rust reference response verifier uses the caller's retained canonical original and the current peer policy. It checks the signature, exact original Core, caller-qualified ID, kind, code, request compatibility and commit presence. The boundary's verification key MUST equal the peer key authenticated by the channel; a mismatch receives INVALID_SOURCE. This response path applies the canonical version selector and returns UNSUPPORTED_VERSION for another declared version before canonical decoding. For Debit the commit position is the ledger revision of the original signed cut. Duplicated terminal decisions or settlements use the commit reference in the retained outcome. The reference path handles native calls with a caller-qualified ID. An unidentifiable or noncanonical input produces a transport error without an invented call identifier. The reference signs a response only after verifying the original with the authenticated channel peer key for SINGLE or the current registered group for THRESHOLD. An original with an invalid signature receives an unsigned error and no response. Before executing a request, the reference encodes the largest response shape for that original Core, including a commit position and a 64-byte signature. If this exceeds the configured frame limit, the request receives INVALID_FORMAT before any effect. A timeout can be followed by an exact authorized resolution for a delivery status or the durable outcome. Go decodes response operands and their correlation fields but does not implement this signature-checked response-verifier API.
 
 | Kind | Commit | Codes and results |
 | --- | --- | --- |

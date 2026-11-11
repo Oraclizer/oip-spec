@@ -695,6 +695,11 @@ func (store *TransportBindings) Receive(raw []byte, profile Profile, boundary Bo
 // admits every operation.
 func (store *TransportBindings) ReceiveAccepting(raw []byte, profile Profile, boundary Boundary,
 	accepts func(*wirepb.Core) bool, attest func(*wirepb.Core) bool) (Arrival, *CanonicalPacket, error) {
+	return store.receiveAccepting(raw, profile, boundary, nil, accepts, attest)
+}
+
+func (store *TransportBindings) receiveAccepting(raw []byte, profile Profile, boundary Boundary, rosters []ThresholdRoster,
+	accepts func(*wirepb.Core) bool, attest func(*wirepb.Core) bool) (Arrival, *CanonicalPacket, error) {
 	if profile.Version != 6 {
 		return First, nil, ErrVersion
 	}
@@ -710,7 +715,7 @@ func (store *TransportBindings) ReceiveAccepting(raw []byte, profile Profile, bo
 	if accepts != nil && !accepts(packet.Core()) {
 		return First, nil, ErrVersion
 	}
-	if err = AdmitPacket(packet, profile, boundary); err != nil {
+	if err = admitPacket(packet, profile, boundary, rosters); err != nil {
 		return First, nil, err
 	}
 	if !attest(packet.Core()) {

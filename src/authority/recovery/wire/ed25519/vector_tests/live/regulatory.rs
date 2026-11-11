@@ -663,7 +663,7 @@ fn reference_regulatory_live_time_spend_and_receiver_ack() {
     let elapsed = call(3, 8, 0, 47, r, b, false, &[u64::MAX / 2], None);
     assert_eq!(
         consume(&mut service, 0, &token, &elapsed),
-        Err(WireError::InvalidSource)
+        Err(WireError::UnsupportedVersion)
     );
     assert_eq!(
         service

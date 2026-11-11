@@ -1,0 +1,20 @@
+{
+  "scope": "Finite Node OpenSSL positive verification observations for the three seeded fixture keys",
+  "checks": [
+    {
+      "key_hex": "56b1a5bf6518c98215eee5076df8d915fb151b3c89f69a33afa4e39588593968",
+      "verified": true,
+      "signature_case": "threshold-attestation-denied"
+    },
+    {
+      "key_hex": "77e3dac6175a3b98d284efe40a8252d78f466c101eee14474965537cf045317d",
+      "verified": true,
+      "signature_case": "threshold-attestation-denied"
+    },
+    {
+      "key_hex": "9378c4dc1987ca8d2f69000fe6e217cc10c7ec011bfc50e7b3e6906a69531fbf",
+      "verified": true,
+      "signature_case": "threshold-all-members"
+    }
+  ]
+}
