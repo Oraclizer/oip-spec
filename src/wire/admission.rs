@@ -3,11 +3,16 @@ use super::codec::{
 };
 use super::generated::Core;
 use super::negotiation::{Profile, verify};
+use super::threshold::{ThresholdRoster, verify_threshold};
 use std::collections::BTreeMap;
 
 #[cfg(test)]
 #[path = "operation_tests.rs"]
 mod operation_tests;
+
+#[cfg(test)]
+#[path = "threshold_tests.rs"]
+mod threshold_tests;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Boundary {
@@ -89,17 +94,46 @@ pub fn admit_packet(
     profile: &Profile,
     boundary: &Boundary,
 ) -> Result<()> {
+    // Existing direct callers already supply a canonical Packet. Preserve
+    // their scope/signature order independently of the configured frame gate.
     check_scope(packet.core(), profile, boundary)?;
+    check_signature(packet, &profile.schemes, &boundary.public_key, &[])
+}
+
+pub fn admit_packet_configured(
+    packet: &CanonicalPacket,
+    profile: &Profile,
+    boundary: &Boundary,
+    rosters: &[ThresholdRoster],
+) -> Result<()> {
+    if packet.encode()?.len() > boundary.max_frame {
+        return Err(WireError::InvalidFormat);
+    }
+    check_scope(packet.core(), profile, boundary)?;
+    check_signature(packet, &profile.schemes, &boundary.public_key, rosters)
+}
+
+/// Signature admission only. Callers must first bound/decode the complete frame
+/// and apply their scope/delivery checks. The channel key stays the SINGLE key.
+pub(crate) fn check_signature(
+    packet: &CanonicalPacket,
+    schemes: &std::collections::BTreeSet<u64>,
+    public_key: &[u8; 32],
+    rosters: &[ThresholdRoster],
+) -> Result<()> {
     let scheme = packet
         .core()
         .signature_scheme
         .ok_or(WireError::InvalidFormat)?;
     if scheme == 2 {
-        return Err(WireError::InvalidThresholdSignature);
+        if !schemes.contains(&2) {
+            return Err(WireError::InvalidThresholdSignature);
+        }
+        return verify_threshold(packet, rosters);
     }
-    if !profile.schemes.contains(&scheme)
+    if !schemes.contains(&scheme)
         || !verify(
-            &boundary.public_key,
+            public_key,
             &packet.signing_bytes()?,
             packet.signature(),
         )
@@ -168,12 +202,23 @@ impl TransportBindings {
         boundary: &Boundary,
         attest: impl FnOnce(&Core) -> bool,
     ) -> Result<(Arrival, CanonicalPacket)> {
+        self.receive_configured(bytes, profile, boundary, &[], attest)
+    }
+
+    pub fn receive_configured(
+        &mut self,
+        bytes: &[u8],
+        profile: &Profile,
+        boundary: &Boundary,
+        rosters: &[ThresholdRoster],
+        attest: impl FnOnce(&Core) -> bool,
+    ) -> Result<(Arrival, CanonicalPacket)> {
         if profile.version != 6 {
             return Err(WireError::UnsupportedVersion);
         }
         check_declared_version(bytes, boundary.max_frame)?;
         let packet = decode_packet(bytes, boundary.max_frame)?;
-        admit_packet(&packet, profile, boundary)?;
+        admit_packet_configured(&packet, profile, boundary, rosters)?;
         if !attest(packet.core()) {
             return Err(WireError::InvalidSource);
         }

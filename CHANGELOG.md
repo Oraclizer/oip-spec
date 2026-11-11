@@ -5,6 +5,22 @@ Changes that matter to implementers are recorded here in the format of
 specification versions. The Rust crate and the Go module are not published
 as packages.
 
+## [0.6.2] - 2026-11-11
+
+### Added
+
+- A canonical scheme 2 signature field and current threshold group rules for
+  configured Ed25519 envelope verification in Rust and Go.
+- Current group checks for authoritative Rust execution, publication and
+  exact authorized resolution.
+
+### Fixed
+
+- The Go installed-channel receiver binds the verification key to the
+  authenticated remote key of that channel.
+- Rust checks that the channel supports its signed response before executing
+  or closing a call through a signed response entry point.
+
 ## [0.6.1] - 2026-11-10
 
 ### Added

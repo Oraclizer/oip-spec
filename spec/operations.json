@@ -82,7 +82,7 @@
       "values": []
     },
     "signature_scheme": {
-      "description": "Core signature scheme (tag 15). The reference profile uses SINGLE with Ed25519.",
+      "description": "Core signature scheme (tag 15). The reference supports SINGLE Ed25519 and configured THRESHOLD with the current registered group.",
       "values": [
         {"code": 1, "name": "SINGLE"},
         {"code": 2, "name": "THRESHOLD"}

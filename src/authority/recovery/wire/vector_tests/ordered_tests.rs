@@ -641,6 +641,54 @@ fn reference_response_retains_busy_rejected_and_unavailable() {
 }
 
 #[test]
+fn signed_response_requires_a_negotiated_response_scheme_before_processing() {
+    use std::io::Read;
+
+    fn journal_bytes(path: &JournalPath) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        path.file().read_to_end(&mut bytes).unwrap();
+        bytes
+    }
+
+    let path = JournalPath::create();
+    let mut service = memory_endpoint(&path);
+    let head = service.anchor.current().unwrap();
+    let journal = journal_bytes(&path);
+    let frame = &[]; // The eligibility check must precede even frame decoding.
+    for (schemes, error) in [
+        (BTreeSet::from([2]), WireError::UnsupportedVersion),
+        (BTreeSet::from([1, 2]), WireError::InvalidFormat),
+    ] {
+        let mut local = offer(0, 0, &[6]);
+        let mut remote = offer(0, 0, &[6]);
+        local.schemes = schemes.clone();
+        remote.schemes = schemes;
+        let profile = select_profile(&local, &remote, 6, false).unwrap();
+        let context = Negotiation {
+            deployment: 7, local: 0, remote: 0, challenge: 3, now: 105, floor: 6,
+            legacy_allowed: false, local_key: local_key().verifying_key().to_bytes(),
+            remote_key: remote_key().verifying_key().to_bytes(),
+        };
+        let channel = negotiate(&context, SignedOffers {
+            local: &local,
+            remote: &remote,
+            local_signature: &local_key().sign(&offer_bytes(&local)).to_bytes(),
+            remote_signature: &remote_key().sign(&offer_bytes(&remote)).to_bytes(),
+            confirmation: &remote_key().sign(&confirmation_bytes(&local, &remote, &profile)).to_bytes(),
+        }).unwrap();
+        assert_eq!(channel.profile(), &profile);
+        assert_eq!(service.receive_wire_response(
+            &channel, Entry::Adapter, frame, &wire_auth(), DeliveryWindow::default(),
+        ).unwrap_err(), error);
+        assert_eq!(service.resolve_wire_debit_response(
+            &channel, frame, &wire_auth(), true,
+        ).unwrap_err(), error);
+        assert_eq!(service.anchor.current().unwrap(), head);
+        assert_eq!(journal_bytes(&path), journal);
+    }
+}
+
+#[test]
 fn reference_response_distinguishes_delivery_and_authentication() {
     use response::ResponseCode;
     let path = JournalPath::create();

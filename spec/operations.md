@@ -1343,7 +1343,7 @@ No named codes.
 
 ### signature_scheme
 
-Core signature scheme (tag 15). The reference profile uses SINGLE with Ed25519.
+Core signature scheme (tag 15). The reference supports SINGLE Ed25519 and configured THRESHOLD with the current registered group.
 
 | Code | Name |
 |---|---|

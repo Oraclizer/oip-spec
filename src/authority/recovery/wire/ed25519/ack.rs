@@ -1,7 +1,7 @@
 //! Acknowledgements issued only from actual durable receiver records.
 
 use super::{
-    AuthorityClock, Ed25519Profile, INVALID, maintenance::AuthorizedDispatch, verify_strict,
+    AuthorityClock, Ed25519Profile, INVALID, maintenance::AuthorizedDispatch,
 };
 use crate::authority::recovery::ordered::etcd::EtcdTransport;
 use crate::authority::recovery::{HeadError, RecoveryProfile};
@@ -244,7 +244,7 @@ pub(super) fn valid_receivers(config: &Ed25519Profile) -> bool {
     })
 }
 
-pub(super) fn verify_ack(config: &Ed25519Profile, ack: &Acknowledgement, bytes: &[u8]) -> bool {
+pub(super) fn verify_ack(config: &Ed25519Profile, rosters: &[crate::wire::threshold::ThresholdRoster], ack: &Acknowledgement, bytes: &[u8]) -> bool {
     let Some((principal, peer)) = receiver(config, ack.target) else {
         return false;
     };
@@ -258,12 +258,8 @@ pub(super) fn verify_ack(config: &Ed25519Profile, ack: &Acknowledgement, bytes: 
         && core.source_domain == Some(ack.target)
         && core.target_domain == Some(ack.commitment.decision.binding.destination)
         && core.principal == Some(principal)
-        && core.key_id == Some(peer.key_id)
         && core.authority_epoch == Some(config.authority_epoch)
         && core.route_scope == Some(config.route_scope)
-        && core.signature_scheme == Some(1)
-        && packet
-            .signing_bytes()
-            .is_ok_and(|message| verify_strict(&peer.public_key, &message, packet.signature()))
+        && super::verify_registered_envelope(&packet, peer, rosters)
         && matches!(decode(core, config.max_nesting), Ok(Operands::Ack(decoded)) if decoded == *ack)
 }

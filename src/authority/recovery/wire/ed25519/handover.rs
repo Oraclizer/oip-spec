@@ -2,7 +2,7 @@
 
 use super::{
     AuthorityClock, Ed25519Profile, Ed25519Security, Handover, INVALID, Identity, Operation, Scope,
-    SessionId, authority_policy_binding, preimage, verify_strict,
+    SessionId, ConfiguredEd25519Profile, configured_policy_binding, preimage, verify_strict,
 };
 use crate::SessionBinding;
 use crate::lock_finality::EndpointContext;
@@ -52,12 +52,23 @@ impl<C: AuthorityClock> Ed25519Security<C> {
     /// Register a host-approved prospective policy. Its keys and grants never
     /// authenticate ordinary ingress through this current-epoch handle.
     pub fn with_successor(
-        mut self,
+        self,
         config: Ed25519Profile,
         contexts: Vec<EndpointContext>,
         next_signer_ready: &[u8; 64],
     ) -> Result<Self, WireError> {
-        let binding = authority_policy_binding(&config)?;
+        self.with_successor_configured(config.into(), contexts, next_signer_ready)
+    }
+
+    pub fn with_successor_configured(
+        mut self,
+        configured: ConfiguredEd25519Profile,
+        contexts: Vec<EndpointContext>,
+        next_signer_ready: &[u8; 64],
+    ) -> Result<Self, WireError> {
+        let binding = configured_policy_binding(&configured)?;
+        let readiness = self.successor_readiness_configured_signing_bytes(&configured, &contexts)?;
+        let config = configured.single;
         if config.profile != self.config.profile
             || config.authority_epoch <= self.config.authority_epoch
             || config.sources != self.config.sources
@@ -78,7 +89,6 @@ impl<C: AuthorityClock> Ed25519Security<C> {
         {
             return Err(INVALID);
         }
-        let readiness = self.successor_readiness_signing_bytes(&config, &contexts)?;
         if !verify_strict(&config.response_key, &readiness, next_signer_ready) {
             return Err(INVALID);
         }
@@ -97,12 +107,20 @@ impl<C: AuthorityClock> Ed25519Security<C> {
         config: &Ed25519Profile,
         contexts: &[EndpointContext],
     ) -> Result<Vec<u8>, WireError> {
+        self.successor_readiness_configured_signing_bytes(&config.clone().into(), contexts)
+    }
+
+    pub fn successor_readiness_configured_signing_bytes(
+        &self,
+        configured: &ConfiguredEd25519Profile,
+        contexts: &[EndpointContext],
+    ) -> Result<Vec<u8>, WireError> {
         preimage(
             b"oip/reference-successor-ready/v1\0",
             &(
                 self.config.profile,
                 self.binding,
-                authority_policy_binding(config)?,
+                configured_policy_binding(configured)?,
                 contexts,
             ),
         )

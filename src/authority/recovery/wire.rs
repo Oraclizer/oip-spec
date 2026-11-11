@@ -10,7 +10,7 @@ use crate::authority::identity::{
 };
 use crate::authority::sync::{self, Stream};
 use crate::lock_finality::{Account, Command, Reply};
-use crate::wire::admission::{Arrival, Boundary, TransportKey, admit_packet, compare_binding, wire_expiry};
+use crate::wire::admission::{Arrival, Boundary, TransportKey, admit_packet_configured, compare_binding, wire_expiry};
 use crate::wire::codec::{CanonicalPacket, WireError, check_declared_version, decode_packet, encode_core};
 use crate::wire::generated::Core;
 use crate::wire::legacy::{self, ValidatedLegacy};
@@ -27,6 +27,14 @@ pub mod schedule;
 /// Installed by the trusted authority host. Peer keys, the active handshake
 /// challenge, source identity and proof adapters are independent inputs.
 pub trait WireSecurity: Security {
+    fn threshold_rosters(&self) -> &[crate::wire::threshold::ThresholdRoster] {
+        &[]
+    }
+    fn verify_original_signature(&self, channel: &Channel, packet: &CanonicalPacket) -> Result<(), WireError> {
+        crate::wire::admission::check_signature(
+            packet, &channel.profile().schemes, &channel.peer_keys()[1], self.threshold_rosters(),
+        )
+    }
     fn channel_current(&self, channel: &Channel) -> bool;
     fn delivery_cancelled(&self, _core: &Core) -> bool {
         false
@@ -171,13 +179,16 @@ impl Input<'_> {
         &self,
         channel: &Channel,
         boundary: &Boundary,
+        rosters: &[crate::wire::threshold::ThresholdRoster],
     ) -> Result<Option<ValidatedLegacy>, WireError> {
         match self {
             Self::Modern(packet) => {
                 if packet.core_bytes().len() > boundary.max_frame {
                     return Err(WireError::InvalidFormat);
                 }
-                admit_packet(packet, channel.profile(), boundary)?;
+                let admitted = admit_packet_configured(packet, channel.profile(), boundary, rosters);
+                #[cfg(test)] crate::wire::threshold::trace::record("admission", packet, rosters, &admitted);
+                admitted?;
                 Ok(None)
             }
             Self::Legacy { bytes, .. } => {
@@ -551,9 +562,8 @@ fn boundary_at<S: WireSecurity>(
     let boundary = security
         .wire_boundary(channel, core, cut)
         .ok_or(WireError::InvalidSource)?;
-    // The admission gate verifies with the selected key and the response path
-    // verifies the original with the key that the channel authenticated, so
-    // both must be the same key for every configuration.
+    // Retain the channel's authenticated peer identity even when the envelope
+    // uses a separately registered threshold roster for that principal.
     if !security.channel_current(channel)
         || boundary.public_key != channel.peer_keys()[1]
         || channel.deployment() != deployment
@@ -663,7 +673,7 @@ fn consume<S: WireSecurity>(
     if ordered.is_none() && product.security.delivery_cancelled(core) {
         return Err(WireError::Cancelled);
     }
-    let legacy = input.verify(channel, &boundary)?;
+    let legacy = input.verify(channel, &boundary, product.security.threshold_rosters())?;
     check_delivery_ttl(product.security.as_ref(), channel, core)?;
     let operands = decode(core, boundary.max_nesting)?;
     let session = source_session(&operands).map(|session| SessionProof { session, epoch: boundary.epoch });
@@ -751,7 +761,7 @@ fn consume<S: WireSecurity>(
             return Err(WireError::InvalidFormat);
         }
     }
-    input.verify(channel, &current)?;
+    input.verify(channel, &current, product.security.threshold_rosters())?;
     let mut debit_scope = None;
     let mut debit_attempt = None;
     if let (Some(observed), Some(request)) = (&observed, &request) {
@@ -945,11 +955,12 @@ fn publication_guard<S: WireSecurity>(
         return Err(WireError::InvalidFormat);
     }
     match channel.profile().version {
-        6 => admit_packet(
-            &decode_packet(bytes, boundary.max_frame)?,
-            channel.profile(),
-            &boundary,
-        )?,
+        6 => {
+            let packet = decode_packet(bytes, boundary.max_frame)?;
+            let admitted = admit_packet_configured(&packet, channel.profile(), &boundary, security.threshold_rosters());
+            #[cfg(test)] crate::wire::threshold::trace::record("publication-reauthorization", &packet, security.threshold_rosters(), &admitted);
+            admitted?;
+        }
         5 => {
             legacy::receive(bytes, channel.profile(), &boundary)?;
         }
@@ -1025,7 +1036,9 @@ impl<S: WireSecurity, H: AuthenticatedHead> PersistentAuthority<S, H> {
             return Err(WireError::InvalidFormat);
         }
         boundary.now = required(core.issued_seconds)?;
-        admit_packet(&packet, channel.profile(), &boundary)?;
+        let admitted = admit_packet_configured(&packet, channel.profile(), &boundary, self.security.threshold_rosters());
+        #[cfg(test)] crate::wire::threshold::trace::record("exact-resolution", &packet, self.security.threshold_rosters(), &admitted);
+        admitted?;
         let transport = TransportKey::for_core(core)?;
         let operands = decode(core, boundary.max_nesting)?;
         let request = request_at(boundary.target, &operands).ok_or(WireError::InvalidFormat)?;

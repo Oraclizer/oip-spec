@@ -23,7 +23,7 @@
   [Changelog](CHANGELOG.md)
 </div>
 
-> **Unaudited. Not for production.** OIP v0.6.1 is a prototype-stage
+> **Unaudited. Not for production.** OIP v0.6.2 is a prototype-stage
 > specification. The Rust and Go code here makes its rules executable
 > and testable. Isabelle/HOL proofs cover models of the protocol under stated
 > assumptions, and the required CI check holds the Rust and Go code to models
@@ -105,7 +105,8 @@ operation is in [`spec/operations.md`](spec/operations.md).
 
 | Version | Defined in | Treatment in this repository |
 | --- | --- | --- |
-| v0.6.1, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Adds state commitment synchronization and accepts Write in the Ed25519 reference profile |
+| v0.6.2, wire version 6 | [`spec/`](spec/) and [`proto/oip.proto`](proto/oip.proto) | Adds configured THRESHOLD envelope verification with the current registered quorum |
+| v0.6.1, wire version 6 | [v0.6.1 release](https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.1) | Adds state commitment synchronization and accepts Write in the Ed25519 reference profile |
 | v0.6.0, wire version 6 | [v0.6.0 release](https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.0) | Earlier version 6 operation set and matching vectors |
 | v0.5 | [OIP v0.5 documentation](https://docs.oraclizer.io/oip-v05/oip-overview/) | Used only with an authenticated, permitted legacy peer and an explicitly configured codec for the common Query and Heartbeat operations. The codec is a reference compatibility record and does not interoperate with the wire format in the published v0.5 documentation |
 | Any other version | | Refused with `UNSUPPORTED_VERSION`. Parse, signature, timeout and rejection errors never select another version |
@@ -122,11 +123,10 @@ them.
 | Go | 1.25.5 with `google.golang.org/protobuf` v1.36.8 |
 | Code generation | protoc 33.5 and protoc-gen-go v1.36.8 |
 
-A `SINGLE` signature uses Ed25519 in the reference profile. A `THRESHOLD`
-signature requires a configured adapter that enforces distinct, currently
-authorized signers and a trusted quorum. This repository contains no
-threshold adapter, so the reference refuses threshold requests with
-`INVALID_THRESHOLD_SIGNATURE`.
+A `SINGLE` signature uses the authenticated peer's Ed25519 key. A configured
+`THRESHOLD` signature carries an ordered list of member signatures over the
+same Core and requires the current registered quorum. See the
+[threshold envelope rules](spec/threshold-signatures.md).
 
 ## Formal verification
 
@@ -205,8 +205,6 @@ establish:
 
 - an independent security audit;
 - a deployment, an operator procedure or a key-management process;
-- threshold signatures, which need an adapter that this repository does not
-  contain;
 - the behavior covered by tests that need live services, because CI does not
   run them;
 - a proof that every run of the compiled Rust or Go code matches the formal

@@ -1,6 +1,6 @@
 # OIP v0.6 state commitment synchronization
 
-This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines the requirement key words. [Operations](operations.md) defines the operand positions.
+This document is part of OIP v0.6.2. [Conformance scope](conformance.md) defines the requirement key words. [Operations](operations.md) defines the operand positions.
 
 ## Operation extension
 
