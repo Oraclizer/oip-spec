@@ -65,8 +65,10 @@ const required = [
   "docs/assets/oip-spec-banner-medium.svg",
   "docs/assets/oip-spec-banner-mobile.svg",
   "docs/assets/architecture-overview.svg",
+  "docs/assets/architecture-overview-medium.svg",
   "docs/assets/architecture-overview-mobile.svg",
   "docs/assets/verification-architecture.svg",
+  "docs/assets/verification-architecture-medium.svg",
   "docs/assets/verification-architecture-mobile.svg",
   "Cargo.toml",
   "Cargo.lock",
@@ -353,28 +355,37 @@ for (const match of readme.matchAll(/img\.shields\.io\/github\/actions\/workflow
   if (!/[?&]branch=main(?:&|$)/.test(match[0])) failures.push(`workflow status badge must show the main branch: ${match[0]}`);
 }
 
-// Every README diagram is a <picture> with two files: the portrait file for
-// README columns below 680px (windows up to 1121px, the same bound as the
-// medium banner) and the landscape file above. The portrait canvas is 600
-// units wide. Diagram letters are drawn as outlines, like the banner letters.
+// Every README diagram is a <picture> with three files chosen by the same
+// README column bands as the banner: the phone file below a 440px column, the
+// medium file below 680px and the desktop file above. Each canvas is wider
+// than the widest column it serves (600 for columns up to 439px, 820 up to
+// 679px and 1200 from 680px, where the column stops at 838px), so GitHub never
+// draws a diagram larger than it was designed. Diagram letters are drawn as
+// outlines, like the banner letters.
 const diagrams = ["architecture-overview", "verification-architecture"];
+const diagramCanvas = [["-mobile", 600], ["-medium", 820], ["", 1200]];
 const pictures = [...readme.matchAll(/<picture>[\s\S]*?<\/picture>/g)].map((match) => match[0]);
 for (const block of pictures.filter((entry) => !entry.includes("oip-spec-banner"))) {
-  const pair = /^<picture>\s*<source media="\(max-width: 1121px\)" srcset="docs\/assets\/([a-z0-9-]+)-mobile\.svg">\s*<img src="docs\/assets\/\1\.svg" alt="[^"]+" width="\d+">\s*<\/picture>$/.exec(block);
-  if (!pair) {
-    failures.push(`README picture must select docs/assets/<name>-mobile.svg for README columns below 680px and docs/assets/<name>.svg above: ${block.slice(0, 120)}`);
+  const bands = /^<picture>\s*<source media="\(max-width: 505px\), \(min-width: 768px\) and \(max-width: 801px\)" srcset="docs\/assets\/([a-z0-9-]+)-mobile\.svg">\s*<source media="\(max-width: 1121px\)" srcset="docs\/assets\/\1-medium\.svg">\s*<img src="docs\/assets\/\1\.svg" alt="[^"]+" width="\d+">\s*<\/picture>$/.exec(block);
+  if (!bands) {
+    failures.push(`README diagram must be a <picture> with docs/assets/<name>-mobile.svg below a 440px README column, docs/assets/<name>-medium.svg below 680px and docs/assets/<name>.svg above: ${block.slice(0, 120)}`);
     continue;
   }
-  const mobile = `docs/assets/${pair[1]}-mobile.svg`;
-  if (isFile(mobile) && !/\bviewBox="0 0 600 \d+(?:\.\d+)?"/.test(read(mobile))) {
-    failures.push(`mobile diagram canvas must be 600 units wide: ${mobile}`);
-  }
-  for (const path of [`docs/assets/${pair[1]}.svg`, mobile]) {
-    if (isFile(path) && /<text[\s>]/.test(read(path))) failures.push(`diagram text must be drawn as outlines: ${path}`);
+  for (const [suffix, width] of diagramCanvas) {
+    const path = `docs/assets/${bands[1]}${suffix}.svg`;
+    if (!isFile(path)) {
+      failures.push(`README diagram file is missing: ${path}`);
+      continue;
+    }
+    const text = read(path);
+    if (!new RegExp(`^<svg\\b[^>]*\\bviewBox="0 0 ${width} \\d+(?:\\.\\d+)?"`).test(text)) {
+      failures.push(`diagram canvas must be ${width} units wide: ${path}`);
+    }
+    if (/<text[\s>]/.test(text)) failures.push(`diagram text must be drawn as outlines: ${path}`);
   }
 }
 for (const name of diagrams) {
-  if (!pictures.some((block) => block.includes(`srcset="docs/assets/${name}-mobile.svg"`))) {
+  if (!pictures.some((block) => block.includes(`srcset="docs/assets/${name}-medium.svg"`))) {
     failures.push(`README missing the diagram: docs/assets/${name}.svg`);
   }
 }
