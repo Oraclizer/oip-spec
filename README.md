@@ -81,7 +81,8 @@ cargo +1.96.1 test --locked -- --list --ignored
 
 <div align="center">
   <picture>
-    <source media="(max-width: 1121px)" srcset="docs/assets/architecture-overview-mobile.svg">
+    <source media="(max-width: 505px)" srcset="docs/assets/architecture-overview-mobile.svg">
+    <source media="(max-width: 1121px)" srcset="docs/assets/architecture-overview-medium.svg">
     <img src="docs/assets/architecture-overview.svg" alt="Request path through OIP: a caller signs a version 6 request with Ed25519, as one signer or as a configured threshold group; Rust and Go receivers run nine ordered checks before any effect and return a typed refusal when one fails; the Rust state owner runs the operation and records the outcome; the caller verifies the signed response against the request it kept" width="900">
   </picture>
 </div>
@@ -132,7 +133,8 @@ same Core and requires the current registered quorum. See the
 
 <div align="center">
   <picture>
-    <source media="(max-width: 1121px)" srcset="docs/assets/verification-architecture-mobile.svg">
+    <source media="(max-width: 505px)" srcset="docs/assets/verification-architecture-mobile.svg">
+    <source media="(max-width: 1121px)" srcset="docs/assets/verification-architecture-medium.svg">
     <img src="docs/assets/verification-architecture.svg" alt="Isabelle/HOL theories, Rust source correspondence and exported models in Oraclizer/formal-verification connect to the specification and implementations here. The required CI check compares 692 transport inputs, 261 response inputs and 22 threshold signature packets." width="900">
   </picture>
 </div>
