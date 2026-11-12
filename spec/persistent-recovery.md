@@ -1,6 +1,6 @@
 # OIP v0.6 authenticated persistence and recovery
 
-This document is part of OIP v0.6.0. [Conformance scope](conformance.md) defines the requirement key words.
+This document is part of OIP v0.6.1. [Conformance scope](conformance.md) defines the requirement key words.
 
 ## One durable authority commit
 

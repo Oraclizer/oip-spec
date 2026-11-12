@@ -41,8 +41,8 @@ The new model entry is
 `OIP_Wire_Oracle_V061.sync_v061_nested_transport_flat`. Its eight outputs are status,
 binding presence/bytes, summary presence, typed IR, canonical Core bytes,
 signing-preimage bytes and transport-key IR. The driver calls the distinct
-`code_typed_model_identity ()`; the earlier accept/binding ABI and its identity
-cannot approve this interface.
+`OIP_Wire_Oracle_V061.sync_v061_typed_model_identity ()`; the earlier
+accept/binding ABI and its identity cannot approve this interface.
 
 The semantic identity has six fields: schema `1`, ABI
 `intinf-wire-values-v2`, scope `wire-v6-general-33-values`, the typed entrypoint,

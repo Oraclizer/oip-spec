@@ -23,6 +23,7 @@ The reference profile is the configuration of the Rust reference implementation 
 | [authoritative-outcomes.md](authoritative-outcomes.md) | Call identity, outcomes and publication |
 | [current-and-historical-reads.md](current-and-historical-reads.md) | Current and historical observations |
 | [identity-handover.md](identity-handover.md) | Caller identity and ownership handover |
+| [threshold-signatures.md](threshold-signatures.md) | Threshold group selection, signature field and admission |
 | [lock-finality.md](lock-finality.md) | Locks, pending mass and terminal evidence |
 | [state-commitment-sync.md](state-commitment-sync.md) | Operation additions, state synchronization and binary source attestations |
 | [response-code-extension.md](response-code-extension.md) | Response code assignments, compatibility and retry |

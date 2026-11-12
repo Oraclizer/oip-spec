@@ -8,6 +8,8 @@ specification and its reference code. Security reports follow
 
 Start with the [README](README.md), the [specification documents](spec/) and
 the [operation table](spec/operations.md). The published
+[OIP v0.6 documentation](https://docs.oraclizer.io/oip-v06/oip-overview/)
+explains this version, and the
 [OIP v0.5 documentation](https://docs.oraclizer.io/oip-v05/oip-overview/)
 describes the previous version.
 

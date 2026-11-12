@@ -21,9 +21,9 @@ HOL-Library.Code_Target_Nat
 `code_response_full_model_identity ()` is a separate fixed constant helper.
 The lock's `identity_function` must match this function and its paired
 entrypoint; the independent origin repeats both. The typed wire judge retains
-its distinct `code_typed_model_identity ()`/typed-entry pair. No public commit,
-self-content hash, runtime PASS or caller-supplied fingerprint enters either
-model identity.
+its distinct `OIP_Wire_Oracle_V061.sync_v061_typed_model_identity ()`/typed-entry
+pair. No public commit, self-content hash, runtime PASS or caller-supplied
+fingerprint enters either model identity.
 
 ## Independent request execution
 

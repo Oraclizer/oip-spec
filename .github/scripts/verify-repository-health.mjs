@@ -353,19 +353,24 @@ for (const match of readme.matchAll(/img\.shields\.io\/github\/actions\/workflow
   if (!/[?&]branch=main(?:&|$)/.test(match[0])) failures.push(`workflow status badge must show the main branch: ${match[0]}`);
 }
 
-// Every README diagram is a <picture>: a 900px mobile source next to its
-// desktop file, with the mobile canvas 600 units wide.
+// Every README diagram is a <picture> with two files: the portrait file for
+// README columns below 680px (windows up to 1121px, the same bound as the
+// medium banner) and the landscape file above. The portrait canvas is 600
+// units wide. Diagram letters are drawn as outlines, like the banner letters.
 const diagrams = ["architecture-overview", "verification-architecture"];
 const pictures = [...readme.matchAll(/<picture>[\s\S]*?<\/picture>/g)].map((match) => match[0]);
 for (const block of pictures.filter((entry) => !entry.includes("oip-spec-banner"))) {
-  const pair = /^<picture>\s*<source media="\(max-width: 900px\)" srcset="docs\/assets\/([a-z0-9-]+)-mobile\.svg">\s*<img src="docs\/assets\/\1\.svg" alt="[^"]+" width="\d+">\s*<\/picture>$/.exec(block);
+  const pair = /^<picture>\s*<source media="\(max-width: 1121px\)" srcset="docs\/assets\/([a-z0-9-]+)-mobile\.svg">\s*<img src="docs\/assets\/\1\.svg" alt="[^"]+" width="\d+">\s*<\/picture>$/.exec(block);
   if (!pair) {
-    failures.push(`README picture must pair docs/assets/<name>-mobile.svg with docs/assets/<name>.svg: ${block.slice(0, 120)}`);
+    failures.push(`README picture must select docs/assets/<name>-mobile.svg for README columns below 680px and docs/assets/<name>.svg above: ${block.slice(0, 120)}`);
     continue;
   }
   const mobile = `docs/assets/${pair[1]}-mobile.svg`;
   if (isFile(mobile) && !/\bviewBox="0 0 600 \d+(?:\.\d+)?"/.test(read(mobile))) {
     failures.push(`mobile diagram canvas must be 600 units wide: ${mobile}`);
+  }
+  for (const path of [`docs/assets/${pair[1]}.svg`, mobile]) {
+    if (isFile(path) && /<text[\s>]/.test(read(path))) failures.push(`diagram text must be drawn as outlines: ${path}`);
   }
 }
 for (const name of diagrams) {

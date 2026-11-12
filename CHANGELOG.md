@@ -110,3 +110,7 @@ release.
   decision on the same bytes.
 - A message with an unsupported version receives `UNSUPPORTED_VERSION`, also
   when it carries fields that this version does not define.
+
+[0.6.2]: https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.2
+[0.6.1]: https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.1
+[0.6.0]: https://github.com/Oraclizer/oip-spec/releases/tag/v0.6.0

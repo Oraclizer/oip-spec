@@ -2,13 +2,13 @@
 
 ## Current status
 
-OIP v0.6.0 is an unaudited, prototype-stage specification draft with
+OIP is an unaudited, prototype-stage specification draft with
 reference code. No deployed instance, fork, operator, key-management process
 or downstream integration is covered by this policy.
 
 | Version | Security support |
 | --- | --- |
-| `main` and v0.6.0 | Reports accepted for evaluation |
+| `main` and the latest release | Reports accepted for evaluation |
 | Earlier drafts, forks and modified copies | Unsupported |
 | Deployments | Unsupported |
 
@@ -47,7 +47,8 @@ Security-sensitive surfaces include:
 
 - message decoding, field order and encoding uniqueness, and the handling of
   unknown fields and versions;
-- signing inputs, Ed25519 verification and the selection of keys and scopes;
+- signing inputs, Ed25519 verification, threshold group selection and quorum
+  checks, and the selection of keys and scopes;
 - message lifetime, duplicate detection and the results returned to retries;
 - authorization of operations, locks, handover and regulatory steps;
 - recovery of recorded outcomes after a timeout or a crash;

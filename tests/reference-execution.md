@@ -17,8 +17,8 @@ trust boundaries.
 | --- | --- | --- |
 | Transport | 180 fixed plus 512 seeded inputs covering admission, retained and re-encoded Core, typed values, signing preimages and transport keys | The independently pinned typed wire export and identity |
 | Finite financial slice | Two genesis seeds plus six raw Reserve/Dispatch/Debit steps; original selector, credential/payer, produced financial result and commit projections | A same-source `finite-financial-raw-slice-v1` export and identity |
-| Reference replay | Fifteen input rows: two genesis rows and thirteen external stimuli | Full executable model and input-only consumer ABI are not yet received |
-| Same-cut regression | Three separate rows: one genesis, duration-zero refusal and a normal Reserve using the same signed cut | Paired current-service model and consumer ABI are not yet received |
+| Reference replay | Fifteen input rows: two genesis rows and thirteen external stimuli | No full executable model or input-only consumer ABI is pinned for this interface |
+| Same-cut regression | Three separate rows: one genesis, duration-zero refusal and a normal Reserve using the same signed cut | No paired current-service model or consumer ABI is pinned for this interface |
 | Signed response | Eighteen fixed positive, semantic-negative and Query precedence cases using the actual signer and public admission API | Source-only regression; the separate sender/current-client comparison is specified in [full-response-consumer.md](full-response-consumer.md) |
 
 The original fifteen-row input file is preserved byte-for-byte. The replay

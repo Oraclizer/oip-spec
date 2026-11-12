@@ -108,9 +108,10 @@ downloads dependencies.
   `python3 scripts/generate-wire.py --protoc /path/to/protoc --go-plugin /path/to/protoc-gen-go`.
 - After changing `spec/operations.json`, regenerate the name view with
   `python3 scripts/render-operations.py`.
-- Each vector file in `tests/vectors/` has a `.sha256` file in the `sha256sum`
-  format. Tests and checksums refer to existing files by name, so new cases
-  go in a new file with its own checksum.
+- Checksum files in `tests/vectors/` use the `sha256sum` format. The inputs
+  of the model comparisons are pinned by their lock files or the runtime
+  source list instead. Tests and checksums refer to existing files by name,
+  so new cases go in a new file with its own checksum or pin.
 
 ## Changes that affect the pinned models
 
@@ -122,11 +123,12 @@ every file in `src/`, `examples/` and `go/`, the Python modules in `scripts/`,
 and named files that include the Cargo manifests, `proto/oip.proto`,
 `spec/operations.json`, the comparison inputs in `tests/` and the pinned
 Poly/ML package in `tools/`. A pull request that changes one of these files,
-including a Rust or Go dependency update, fails the Tests result check until a
-model with the new fingerprint is exported and pinned in
-`tests/model-artifact.lock.json`. Say in the pull request that the change
-needs a new export. Documentation and other files outside the list do not
-affect the models.
+including a Rust or Go dependency update, fails the Tests result check until
+the models with the new fingerprint are exported and pinned again in all three
+locks: `tests/model-artifact.lock.json`, `tests/wire-response-artifact.lock.json`
+and `tests/threshold-raw-artifact.lock.json`. Say in the pull request that the
+change needs a new export. Documentation and other files outside the list do
+not affect the models.
 
 For the same reason, Dependabot opens pull requests for Rust and Go
 dependencies only for security updates
